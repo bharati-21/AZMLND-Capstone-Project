@@ -14,12 +14,13 @@ from azureml.data.dataset_factory import TabularDatasetFactory
 
 def clean_data(data):
     # Changing name of columns to understand the data better 
-    data.columns = ['age', 'sex', 'chest_pain_type', 'resting_BP', 'cholesterol', 'fasting_blood_sugar', 'rest_ecg', 'max_heart_rate',
+    data_df = data.to_pandas_dataframe()
+    data_df.columns = ['age', 'sex', 'chest_pain_type', 'resting_BP', 'cholesterol', 'fasting_blood_sugar', 'rest_ecg', 'max_heart_rate',
        'exercise_induced_angina', 'st_depression', 'st_slope', 'num_major_vessels', 'thalassemia', 'target']
     
     # Dropping the target column 'target' from the dataset
-    y_df = data.target
-    x_df = data.drop('target', axis = 1)
+    y_df = data_df.target
+    x_df = data_df.drop('target', axis = 1)
     
     # The data has no NaN/ null values. 
     # Encode the categorical column 'thalassemia' using LabelEncoder
@@ -44,7 +45,7 @@ def main():
 
     # clean the data
     x, y = clean_data(ds)
-
+    
     #  Split data into train and test sets.
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3)
     #print(x_train.shape, x_test.shape, y_train.shape, y_test.shape)

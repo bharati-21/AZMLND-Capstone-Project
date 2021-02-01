@@ -1,0 +1,591 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Hyperparameter Tuning using HyperDrive\n",
+        "\n",
+        "TODO: Import Dependencies. In the cell below, import all the dependencies that you will need to complete the project."
+      ],
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from azureml.core import Workspace, Experiment"
+      ],
+      "outputs": [],
+      "execution_count": 1,
+      "metadata": {
+        "gather": {
+          "logged": 1598531914256
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Dataset\n",
+        "\n",
+        "TODO: Get data. In the cell below, write code to access the data you will be using in this project. Remember that the dataset needs to be external."
+      ],
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "ws = Workspace.from_config()\n",
+        "\n",
+        "print('WORKSPACE DETAILS:', 'Workspace name: ' + ws.name, \n",
+        "      'Azure region: ' + ws.location, \n",
+        "      'Subscription id: ' + ws.subscription_id, \n",
+        "      'Resource group: ' + ws.resource_group, sep = '\\n')\n",
+        "\n",
+        "experiment_name = 'Heart_Disease_Kaggle'\n",
+        "experiment=Experiment(workspace=ws, name=experiment_name)\n",
+        "\n",
+        "run = experiment.start_logging()"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "WORKSPACE DETAILS:\n",
+            "Workspace name: quick-starts-ws-136793\n",
+            "Azure region: southcentralus\n",
+            "Subscription id: 48a74bb7-9950-4cc1-9caa-5d50f995cc55\n",
+            "Resource group: aml-quickstarts-136793\n"
+          ]
+        }
+      ],
+      "execution_count": 2,
+      "metadata": {
+        "gather": {
+          "logged": 1598531917374
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from azureml.core.compute import ComputeTarget, AmlCompute\n",
+        "from azureml.core.compute_target import ComputeTargetException\n",
+        "# Creating compute cluster\n",
+        "# vm_size = \"Standard_D2_V2\" in your provisioning configuration.\n",
+        "# max_nodes = 4.\n",
+        "\n",
+        "cpu_cluster_name = \"cpu-cluster\"\n",
+        "\n",
+        "# to check whether the compute cluster exists already or not\n",
+        "try:\n",
+        "    cpu_cluster = ComputeTarget(workspace=ws, name=cpu_cluster_name)\n",
+        "    print(\"Existing compute target found... Using it\")\n",
+        "\n",
+        "except ComputeTargetException:\n",
+        "    print(\"Creating new Compute Target... \" + cpu_cluster_name)\n",
+        "    provisioning_compute_config = AmlCompute.provisioning_configuration(vm_size=\"STANDARD_D2_V2\", max_nodes=4)\n",
+        "    cpu_cluster = ComputeTarget.create(ws, cpu_cluster_name, provisioning_compute_config)\n",
+        "\n",
+        "cpu_cluster.wait_for_completion(show_output=True)"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Creating new Compute Target... cpu-cluster\n",
+            "Creating\n",
+            "Succeeded\n",
+            "AmlCompute wait for completion finished\n",
+            "\n",
+            "Minimum number of nodes requested have been provisioned\n"
+          ]
+        }
+      ],
+      "execution_count": 3,
+      "metadata": {}
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Datset Preview"
+      ],
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from azureml.data.dataset_factory import TabularDatasetFactory\n",
+        "\n",
+        "url_path = \"https://raw.githubusercontent.com/bharati-21/AZMLND-Capstone-Project/master/files/heart.csv\"\n",
+        "ds = TabularDatasetFactory.from_delimited_files(path=url_path)"
+      ],
+      "outputs": [],
+      "execution_count": 4,
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "ds_dataframe = ds.to_pandas_dataframe()\n",
+        "ds_dataframe.head()"
+      ],
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "execution_count": 5,
+          "data": {
+            "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>age</th>\n      <th>sex</th>\n      <th>cp</th>\n      <th>trestbps</th>\n      <th>chol</th>\n      <th>fbs</th>\n      <th>restecg</th>\n      <th>thalach</th>\n      <th>exang</th>\n      <th>oldpeak</th>\n      <th>slope</th>\n      <th>ca</th>\n      <th>thal</th>\n      <th>target</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>63</td>\n      <td>1</td>\n      <td>3</td>\n      <td>145</td>\n      <td>233</td>\n      <td>1</td>\n      <td>0</td>\n      <td>150</td>\n      <td>0</td>\n      <td>2.3</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>1</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>37</td>\n      <td>1</td>\n      <td>2</td>\n      <td>130</td>\n      <td>250</td>\n      <td>0</td>\n      <td>1</td>\n      <td>187</td>\n      <td>0</td>\n      <td>3.5</td>\n      <td>0</td>\n      <td>0</td>\n      <td>2</td>\n      <td>1</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>41</td>\n      <td>0</td>\n      <td>1</td>\n      <td>130</td>\n      <td>204</td>\n      <td>0</td>\n      <td>0</td>\n      <td>172</td>\n      <td>0</td>\n      <td>1.4</td>\n      <td>2</td>\n      <td>0</td>\n      <td>2</td>\n      <td>1</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>56</td>\n      <td>1</td>\n      <td>1</td>\n      <td>120</td>\n      <td>236</td>\n      <td>0</td>\n      <td>1</td>\n      <td>178</td>\n      <td>0</td>\n      <td>0.8</td>\n      <td>2</td>\n      <td>0</td>\n      <td>2</td>\n      <td>1</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>57</td>\n      <td>0</td>\n      <td>0</td>\n      <td>120</td>\n      <td>354</td>\n      <td>0</td>\n      <td>1</td>\n      <td>163</td>\n      <td>1</td>\n      <td>0.6</td>\n      <td>2</td>\n      <td>0</td>\n      <td>2</td>\n      <td>1</td>\n    </tr>\n  </tbody>\n</table>\n</div>",
+            "text/plain": "   age  sex  cp  trestbps  chol  fbs  restecg  thalach  exang  oldpeak  slope  \\\n0   63    1   3       145   233    1        0      150      0      2.3      0   \n1   37    1   2       130   250    0        1      187      0      3.5      0   \n2   41    0   1       130   204    0        0      172      0      1.4      2   \n3   56    1   1       120   236    0        1      178      0      0.8      2   \n4   57    0   0       120   354    0        1      163      1      0.6      2   \n\n   ca  thal  target  \n0   0     1       1  \n1   0     2       1  \n2   0     2       1  \n3   0     2       1  \n4   0     2       1  "
+          },
+          "metadata": {}
+        }
+      ],
+      "execution_count": 5,
+      "metadata": {
+        "scrolled": true
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Hyperdrive Configuration\n",
+        "\n",
+        "TODO: Explain the model you are using and the reason for chosing the different hyperparameters, termination policy and config settings."
+      ],
+      "metadata": {
+        "collapsed": true,
+        "gather": {
+          "logged": 1598531923519
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from azureml.widgets import RunDetails\n",
+        "import shutil\n",
+        "from azureml.train.sklearn import SKLearn\n",
+        "from azureml.core import ScriptRunConfig, Experiment\n",
+        "from azureml.train.hyperdrive.run import PrimaryMetricGoal\n",
+        "from azureml.train.hyperdrive.runconfig import HyperDriveConfig\n",
+        "from azureml.train.hyperdrive.policy import BanditPolicy\n",
+        "from azureml.train.hyperdrive.sampling import BayesianParameterSampling\n",
+        "from azureml.train.hyperdrive.sampling import RandomParameterSampling\n",
+        "from azureml.train.hyperdrive.parameter_expressions import uniform, choice\n",
+        "from azureml.train.hyperdrive import HyperDriveConfig\n",
+        "import os\n",
+        "\n",
+        "\n",
+        "# TODO: Create an early termination policy. This is not required if you are using Bayesian sampling.\n",
+        "# early_termination_policy = BanditPolicy(evaluation_interval=2, slack_factor=0.1, delay_evaluation=5)\n",
+        "\n",
+        "# TODO: Create the different params that you will be using during training\n",
+        "param_sampling = BayesianParameterSampling({\n",
+        "    \"--C\" : uniform(0.01, 2),\n",
+        "    \"--max_iter\" : choice(10, 50, 100, 150, 200),\n",
+        "})\n",
+        "\n",
+        "\n",
+        "#TODO: Create your estimator and hyperdrive config\n",
+        "if \"training\" not in os.listdir():\n",
+        "    os.mkdir(\"./training\")\n",
+        "\n",
+        "estimator = SKLearn (\n",
+        "    source_directory= os.path.join(\"./\"),\n",
+        "    compute_target= cpu_cluster,\n",
+        "    entry_script= \"train.py\"\n",
+        ")\n",
+        "\n",
+        "hyperdrive_run_config = HyperDriveConfig (\n",
+        "        estimator=estimator, \n",
+        "        hyperparameter_sampling=param_sampling, \n",
+        "        policy = None,\n",
+        "        primary_metric_name='accuracy', \n",
+        "        primary_metric_goal=PrimaryMetricGoal.MAXIMIZE, \n",
+        "        max_total_runs=20,\n",
+        "        max_concurrent_runs=4\n",
+        ")"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "'SKLearn' estimator is deprecated. Please use 'ScriptRunConfig' from 'azureml.core.script_run_config' with your own defined environment or the AzureML-Tutorial curated environment.\n",
+            "For best results with Bayesian Sampling we recommend using a maximum number of runs greater than or equal to 20 times the number of hyperparameters being tuned. Recommendend value:40.\n"
+          ]
+        }
+      ],
+      "execution_count": 8,
+      "metadata": {
+        "gather": {
+          "logged": 1598544893076
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#TODO: Submit your experiment\n",
+        "\n",
+        "run = experiment.submit(hyperdrive_run_config)"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "WARNING:root:If 'script' has been provided here and a script file name has been specified in 'run_config', 'script' provided in ScriptRunConfig initialization will take precedence.\n"
+          ]
+        }
+      ],
+      "execution_count": 9,
+      "metadata": {
+        "gather": {
+          "logged": 1598544897941
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Run Details\n",
+        "\n",
+        "OPTIONAL: Write about the different models trained and their performance. Why do you think some models did better than others?\n",
+        "\n",
+        "TODO: In the cell below, use the `RunDetails` widget to show the different experiments."
+      ],
+      "metadata": {
+        "collapsed": true,
+        "gather": {
+          "logged": 1598544898497
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "RunDetails(run).show()\n",
+        "run.wait_for_completion(show_output=True)"
+      ],
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "application/vnd.jupyter.widget-view+json": {
+              "model_id": "860104ca4f80469fa328ddce079611d3",
+              "version_major": 2,
+              "version_minor": 0
+            },
+            "text/plain": "_HyperDriveWidget(widget_settings={'childWidgetDisplay': 'popup', 'send_telemetry': False, 'log_level': 'INFO'…"
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "application/aml.mini.widget.v1": "{\"status\": \"Completed\", \"workbench_run_details_uri\": \"https://ml.azure.com/experiments/Heart_Disease_Kaggle/runs/HD_6719bce3-7fb3-474f-806f-8bb887ab1078?wsid=/subscriptions/48a74bb7-9950-4cc1-9caa-5d50f995cc55/resourcegroups/aml-quickstarts-136793/workspaces/quick-starts-ws-136793\", \"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078\", \"run_properties\": {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078\", \"created_utc\": \"2021-02-01T07:03:22.84405Z\", \"properties\": {\"primary_metric_config\": \"{\\\"name\\\": \\\"accuracy\\\", \\\"goal\\\": \\\"maximize\\\"}\", \"resume_from\": \"null\", \"runTemplate\": \"HyperDrive\", \"azureml.runsource\": \"hyperdrive\", \"platform\": \"AML\", \"ContentSnapshotId\": \"cde732d9-519c-49a8-b60f-08000d82641e\", \"score\": \"0.8791208791208791\", \"best_child_run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_12\", \"best_metric_status\": \"Succeeded\"}, \"tags\": {\"_aml_system_max_concurrent_jobs\": \"4\", \"max_concurrent_jobs\": \"4\", \"_aml_system_max_total_jobs\": \"20\", \"max_total_jobs\": \"20\", \"_aml_system_max_duration_minutes\": \"10080\", \"max_duration_minutes\": \"10080\", \"_aml_system_policy_config\": \"{\\\"name\\\": \\\"DEFAULT\\\"}\", \"policy_config\": \"{\\\"name\\\": \\\"DEFAULT\\\"}\", \"_aml_system_generator_config\": \"{\\\"name\\\": \\\"BAYESIANOPTIMIZATION\\\", \\\"parameter_space\\\": {\\\"--C\\\": [\\\"uniform\\\", [0.01, 2]], \\\"--max_iter\\\": [\\\"choice\\\", [[10, 50, 100, 150, 200]]]}}\", \"generator_config\": \"{\\\"name\\\": \\\"BAYESIANOPTIMIZATION\\\", \\\"parameter_space\\\": {\\\"--C\\\": [\\\"uniform\\\", [0.01, 2]], \\\"--max_iter\\\": [\\\"choice\\\", [[10, 50, 100, 150, 200]]]}}\", \"_aml_system_primary_metric_config\": \"{\\\"name\\\": \\\"accuracy\\\", \\\"goal\\\": \\\"maximize\\\"}\", \"primary_metric_config\": \"{\\\"name\\\": \\\"accuracy\\\", \\\"goal\\\": \\\"maximize\\\"}\", \"_aml_system_platform_config\": \"{\\\"ServiceAddress\\\": \\\"https://southcentralus.experiments.azureml.net\\\", \\\"ServiceArmScope\\\": \\\"subscriptions/48a74bb7-9950-4cc1-9caa-5d50f995cc55/resourceGroups/aml-quickstarts-136793/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-136793/experiments/Heart_Disease_Kaggle\\\", \\\"SubscriptionId\\\": \\\"48a74bb7-9950-4cc1-9caa-5d50f995cc55\\\", \\\"ResourceGroupName\\\": \\\"aml-quickstarts-136793\\\", \\\"WorkspaceName\\\": \\\"quick-starts-ws-136793\\\", \\\"ExperimentName\\\": \\\"Heart_Disease_Kaggle\\\", \\\"Definition\\\": {\\\"Overrides\\\": {\\\"script\\\": \\\"train.py\\\", \\\"arguments\\\": [], \\\"target\\\": \\\"cpu-cluster\\\", \\\"framework\\\": \\\"Python\\\", \\\"communicator\\\": \\\"None\\\", \\\"maxRunDurationSeconds\\\": null, \\\"nodeCount\\\": 1, \\\"environment\\\": {\\\"name\\\": null, \\\"version\\\": null, \\\"environmentVariables\\\": {\\\"EXAMPLE_ENV_VAR\\\": \\\"EXAMPLE_VALUE\\\"}, \\\"python\\\": {\\\"userManagedDependencies\\\": true, \\\"interpreterPath\\\": \\\"python\\\", \\\"condaDependenciesFile\\\": null, \\\"baseCondaEnvironment\\\": null, \\\"condaDependencies\\\": {\\\"name\\\": \\\"project_environment\\\", \\\"dependencies\\\": [\\\"python=3.6.2\\\", {\\\"pip\\\": [\\\"azureml-defaults\\\"]}], \\\"channels\\\": [\\\"anaconda\\\", \\\"conda-forge\\\"]}}, \\\"docker\\\": {\\\"enabled\\\": true, \\\"baseImage\\\": \\\"sklearn:0.20.3-cpu\\\", \\\"baseDockerfile\\\": null, \\\"sharedVolumes\\\": true, \\\"shmSize\\\": \\\"2g\\\", \\\"arguments\\\": [], \\\"baseImageRegistry\\\": {\\\"address\\\": \\\"viennaprivate.azurecr.io\\\", \\\"username\\\": null, \\\"password\\\": null, \\\"registryIdentity\\\": null}, \\\"platform\\\": {\\\"os\\\": \\\"Linux\\\", \\\"architecture\\\": \\\"amd64\\\"}}, \\\"spark\\\": {\\\"repositories\\\": [], \\\"packages\\\": [], \\\"precachePackages\\\": false}, \\\"databricks\\\": {\\\"mavenLibraries\\\": [], \\\"pypiLibraries\\\": [], \\\"rcranLibraries\\\": [], \\\"jarLibraries\\\": [], \\\"eggLibraries\\\": []}, \\\"r\\\": null, \\\"inferencingStackVersion\\\": null}, \\\"history\\\": {\\\"outputCollection\\\": true, \\\"snapshotProject\\\": true, \\\"directoriesToWatch\\\": [\\\"logs\\\"]}, \\\"spark\\\": {\\\"configuration\\\": {\\\"spark.app.name\\\": \\\"Azure ML Experiment\\\", \\\"spark.yarn.maxAppAttempts\\\": 1}}, \\\"hdi\\\": {\\\"yarnDeployMode\\\": \\\"cluster\\\"}, \\\"tensorflow\\\": {\\\"workerCount\\\": 1, \\\"parameterServerCount\\\": 1}, \\\"mpi\\\": {\\\"processCountPerNode\\\": 1, \\\"nodeCount\\\": 1}, \\\"paralleltask\\\": {\\\"maxRetriesPerWorker\\\": 0, \\\"workerCountPerNode\\\": 1, \\\"terminalExitCodes\\\": null}, \\\"dataReferences\\\": {}, \\\"data\\\": {}, \\\"outputData\\\": {}, \\\"sourceDirectoryDataStore\\\": null, \\\"amlcompute\\\": {\\\"vmSize\\\": null, \\\"vmPriority\\\": null, \\\"retainCluster\\\": false, \\\"name\\\": null, \\\"clusterMaxNodeCount\\\": 1}, \\\"command\\\": \\\"\\\"}, \\\"TargetDetails\\\": null, \\\"SnapshotId\\\": \\\"cde732d9-519c-49a8-b60f-08000d82641e\\\", \\\"TelemetryValues\\\": {\\\"amlClientType\\\": \\\"azureml-sdk-train\\\", \\\"amlClientModule\\\": \\\"[Scrubbed]\\\", \\\"amlClientFunction\\\": \\\"[Scrubbed]\\\", \\\"tenantId\\\": \\\"660b3398-b80e-49d2-bc5b-ac1dc93b5254\\\", \\\"amlClientRequestId\\\": \\\"511b7ac2-1596-4976-b959-520c39497f1a\\\", \\\"amlClientSessionId\\\": \\\"9542a093-7090-49c2-94bf-944f71156cf6\\\", \\\"subscriptionId\\\": \\\"48a74bb7-9950-4cc1-9caa-5d50f995cc55\\\", \\\"estimator\\\": \\\"SKLearn\\\", \\\"samplingMethod\\\": \\\"BayesianOptimization\\\", \\\"terminationPolicy\\\": \\\"Default\\\", \\\"primaryMetricGoal\\\": \\\"maximize\\\", \\\"maxTotalRuns\\\": 20, \\\"maxConcurrentRuns\\\": 4, \\\"maxDurationMinutes\\\": 10080, \\\"vmSize\\\": null}}}\", \"platform_config\": \"{\\\"ServiceAddress\\\": \\\"https://southcentralus.experiments.azureml.net\\\", \\\"ServiceArmScope\\\": \\\"subscriptions/48a74bb7-9950-4cc1-9caa-5d50f995cc55/resourceGroups/aml-quickstarts-136793/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-136793/experiments/Heart_Disease_Kaggle\\\", \\\"SubscriptionId\\\": \\\"48a74bb7-9950-4cc1-9caa-5d50f995cc55\\\", \\\"ResourceGroupName\\\": \\\"aml-quickstarts-136793\\\", \\\"WorkspaceName\\\": \\\"quick-starts-ws-136793\\\", \\\"ExperimentName\\\": \\\"Heart_Disease_Kaggle\\\", \\\"Definition\\\": {\\\"Overrides\\\": {\\\"script\\\": \\\"train.py\\\", \\\"arguments\\\": [], \\\"target\\\": \\\"cpu-cluster\\\", \\\"framework\\\": \\\"Python\\\", \\\"communicator\\\": \\\"None\\\", \\\"maxRunDurationSeconds\\\": null, \\\"nodeCount\\\": 1, \\\"environment\\\": {\\\"name\\\": null, \\\"version\\\": null, \\\"environmentVariables\\\": {\\\"EXAMPLE_ENV_VAR\\\": \\\"EXAMPLE_VALUE\\\"}, \\\"python\\\": {\\\"userManagedDependencies\\\": true, \\\"interpreterPath\\\": \\\"python\\\", \\\"condaDependenciesFile\\\": null, \\\"baseCondaEnvironment\\\": null, \\\"condaDependencies\\\": {\\\"name\\\": \\\"project_environment\\\", \\\"dependencies\\\": [\\\"python=3.6.2\\\", {\\\"pip\\\": [\\\"azureml-defaults\\\"]}], \\\"channels\\\": [\\\"anaconda\\\", \\\"conda-forge\\\"]}}, \\\"docker\\\": {\\\"enabled\\\": true, \\\"baseImage\\\": \\\"sklearn:0.20.3-cpu\\\", \\\"baseDockerfile\\\": null, \\\"sharedVolumes\\\": true, \\\"shmSize\\\": \\\"2g\\\", \\\"arguments\\\": [], \\\"baseImageRegistry\\\": {\\\"address\\\": \\\"viennaprivate.azurecr.io\\\", \\\"username\\\": null, \\\"password\\\": null, \\\"registryIdentity\\\": null}, \\\"platform\\\": {\\\"os\\\": \\\"Linux\\\", \\\"architecture\\\": \\\"amd64\\\"}}, \\\"spark\\\": {\\\"repositories\\\": [], \\\"packages\\\": [], \\\"precachePackages\\\": false}, \\\"databricks\\\": {\\\"mavenLibraries\\\": [], \\\"pypiLibraries\\\": [], \\\"rcranLibraries\\\": [], \\\"jarLibraries\\\": [], \\\"eggLibraries\\\": []}, \\\"r\\\": null, \\\"inferencingStackVersion\\\": null}, \\\"history\\\": {\\\"outputCollection\\\": true, \\\"snapshotProject\\\": true, \\\"directoriesToWatch\\\": [\\\"logs\\\"]}, \\\"spark\\\": {\\\"configuration\\\": {\\\"spark.app.name\\\": \\\"Azure ML Experiment\\\", \\\"spark.yarn.maxAppAttempts\\\": 1}}, \\\"hdi\\\": {\\\"yarnDeployMode\\\": \\\"cluster\\\"}, \\\"tensorflow\\\": {\\\"workerCount\\\": 1, \\\"parameterServerCount\\\": 1}, \\\"mpi\\\": {\\\"processCountPerNode\\\": 1, \\\"nodeCount\\\": 1}, \\\"paralleltask\\\": {\\\"maxRetriesPerWorker\\\": 0, \\\"workerCountPerNode\\\": 1, \\\"terminalExitCodes\\\": null}, \\\"dataReferences\\\": {}, \\\"data\\\": {}, \\\"outputData\\\": {}, \\\"sourceDirectoryDataStore\\\": null, \\\"amlcompute\\\": {\\\"vmSize\\\": null, \\\"vmPriority\\\": null, \\\"retainCluster\\\": false, \\\"name\\\": null, \\\"clusterMaxNodeCount\\\": 1}, \\\"command\\\": \\\"\\\"}, \\\"TargetDetails\\\": null, \\\"SnapshotId\\\": \\\"cde732d9-519c-49a8-b60f-08000d82641e\\\", \\\"TelemetryValues\\\": {\\\"amlClientType\\\": \\\"azureml-sdk-train\\\", \\\"amlClientModule\\\": \\\"[Scrubbed]\\\", \\\"amlClientFunction\\\": \\\"[Scrubbed]\\\", \\\"tenantId\\\": \\\"660b3398-b80e-49d2-bc5b-ac1dc93b5254\\\", \\\"amlClientRequestId\\\": \\\"511b7ac2-1596-4976-b959-520c39497f1a\\\", \\\"amlClientSessionId\\\": \\\"9542a093-7090-49c2-94bf-944f71156cf6\\\", \\\"subscriptionId\\\": \\\"48a74bb7-9950-4cc1-9caa-5d50f995cc55\\\", \\\"estimator\\\": \\\"SKLearn\\\", \\\"samplingMethod\\\": \\\"BayesianOptimization\\\", \\\"terminationPolicy\\\": \\\"Default\\\", \\\"primaryMetricGoal\\\": \\\"maximize\\\", \\\"maxTotalRuns\\\": 20, \\\"maxConcurrentRuns\\\": 4, \\\"maxDurationMinutes\\\": 10080, \\\"vmSize\\\": null}}}\", \"_aml_system_resume_child_runs\": \"null\", \"resume_child_runs\": \"null\", \"_aml_system_all_jobs_generated\": \"true\", \"all_jobs_generated\": \"true\", \"_aml_system_cancellation_requested\": \"false\", \"cancellation_requested\": \"false\", \"_aml_system_progress_metadata_evaluation_timestamp\": \"\\\"2021-02-01T07:03:23.486483\\\"\", \"progress_metadata_evaluation_timestamp\": \"\\\"2021-02-01T07:03:23.486483\\\"\", \"_aml_system_progress_metadata_digest\": \"\\\"7846e74e7ac2d58a2902bba4bc38a691fb6b0425cf3876255d7a5c8b50bbc4b7\\\"\", \"progress_metadata_digest\": \"\\\"7846e74e7ac2d58a2902bba4bc38a691fb6b0425cf3876255d7a5c8b50bbc4b7\\\"\", \"_aml_system_progress_metadata_active_timestamp\": \"\\\"2021-02-01T07:03:23.486483\\\"\", \"progress_metadata_active_timestamp\": \"\\\"2021-02-01T07:03:23.486483\\\"\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_0\": \"{\\\"--C\\\": 0.4873075247098091, \\\"--max_iter\\\": 150}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_0\": \"{\\\"--C\\\": 0.4873075247098091, \\\"--max_iter\\\": 150}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_1\": \"{\\\"--C\\\": 1.4598295253449016, \\\"--max_iter\\\": 10}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_1\": \"{\\\"--C\\\": 1.4598295253449016, \\\"--max_iter\\\": 10}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_2\": \"{\\\"--C\\\": 1.7940743115401825, \\\"--max_iter\\\": 10}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_2\": \"{\\\"--C\\\": 1.7940743115401825, \\\"--max_iter\\\": 10}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_3\": \"{\\\"--C\\\": 0.5266559380147862, \\\"--max_iter\\\": 100}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_3\": \"{\\\"--C\\\": 0.5266559380147862, \\\"--max_iter\\\": 100}\", \"_aml_system_environment_preparation_status\": \"PREPARED\", \"environment_preparation_status\": \"PREPARED\", \"_aml_system_prepare_run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_preparation\", \"prepare_run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_preparation\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_4\": \"{\\\"--C\\\": 1.4272268331852709, \\\"--max_iter\\\": 10}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_4\": \"{\\\"--C\\\": 1.4272268331852709, \\\"--max_iter\\\": 10}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_5\": \"{\\\"--C\\\": 0.23892765730037274, \\\"--max_iter\\\": 100}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_5\": \"{\\\"--C\\\": 0.23892765730037274, \\\"--max_iter\\\": 100}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_6\": \"{\\\"--C\\\": 0.2569512325818647, \\\"--max_iter\\\": 150}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_6\": \"{\\\"--C\\\": 0.2569512325818647, \\\"--max_iter\\\": 150}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_7\": \"{\\\"--C\\\": 0.8139609090131578, \\\"--max_iter\\\": 100}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_7\": \"{\\\"--C\\\": 0.8139609090131578, \\\"--max_iter\\\": 100}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_8\": \"{\\\"--C\\\": 0.5378158171508237, \\\"--max_iter\\\": 50}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_8\": \"{\\\"--C\\\": 0.5378158171508237, \\\"--max_iter\\\": 50}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_9\": \"{\\\"--C\\\": 1.2667133140354632, \\\"--max_iter\\\": 50}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_9\": \"{\\\"--C\\\": 1.2667133140354632, \\\"--max_iter\\\": 50}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_10\": \"{\\\"--C\\\": 0.03615019772894734, \\\"--max_iter\\\": 100}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_10\": \"{\\\"--C\\\": 0.03615019772894734, \\\"--max_iter\\\": 100}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_11\": \"{\\\"--C\\\": 0.32921678905932794, \\\"--max_iter\\\": 100}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_11\": \"{\\\"--C\\\": 0.32921678905932794, \\\"--max_iter\\\": 100}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_12\": \"{\\\"--C\\\": 0.2403212873957113, \\\"--max_iter\\\": 100}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_12\": \"{\\\"--C\\\": 0.2403212873957113, \\\"--max_iter\\\": 100}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_13\": \"{\\\"--C\\\": 1.7275798416693748, \\\"--max_iter\\\": 50}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_13\": \"{\\\"--C\\\": 1.7275798416693748, \\\"--max_iter\\\": 50}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_14\": \"{\\\"--C\\\": 1.813233127262985, \\\"--max_iter\\\": 200}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_14\": \"{\\\"--C\\\": 1.813233127262985, \\\"--max_iter\\\": 200}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_15\": \"{\\\"--C\\\": 0.2408782377603102, \\\"--max_iter\\\": 100}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_15\": \"{\\\"--C\\\": 0.2408782377603102, \\\"--max_iter\\\": 100}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_16\": \"{\\\"--C\\\": 0.2410526128105645, \\\"--max_iter\\\": 100}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_16\": \"{\\\"--C\\\": 0.2410526128105645, \\\"--max_iter\\\": 100}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_17\": \"{\\\"--C\\\": 0.1973653109734659, \\\"--max_iter\\\": 100}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_17\": \"{\\\"--C\\\": 0.1973653109734659, \\\"--max_iter\\\": 100}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_18\": \"{\\\"--C\\\": 0.2786283137708579, \\\"--max_iter\\\": 100}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_18\": \"{\\\"--C\\\": 0.2786283137708579, \\\"--max_iter\\\": 100}\", \"_aml_system_HD_6719bce3-7fb3-474f-806f-8bb887ab1078_19\": \"{\\\"--C\\\": 0.11122143612599075, \\\"--max_iter\\\": 100}\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_19\": \"{\\\"--C\\\": 0.11122143612599075, \\\"--max_iter\\\": 100}\"}, \"end_time_utc\": \"2021-02-01T07:16:14.700969Z\", \"status\": \"Completed\", \"log_files\": {\"azureml-logs/hyperdrive.txt\": \"https://mlstrg136793.blob.core.windows.net/azureml/ExperimentRun/dcid.HD_6719bce3-7fb3-474f-806f-8bb887ab1078/azureml-logs/hyperdrive.txt?sv=2019-02-02&sr=b&sig=7%2Bs5uQ5jBViIZpb3uzkhTVQhHH0N2INp1bFEHviyruE%3D&st=2021-02-01T07%3A06%3A42Z&se=2021-02-01T15%3A16%3A42Z&sp=r\"}, \"log_groups\": [[\"azureml-logs/hyperdrive.txt\"]], \"run_duration\": \"0:12:51\", \"hyper_parameters\": {\"--C\": [\"uniform\", [0.01, 2]], \"--max_iter\": [\"choice\", [[10, 50, 100, 150, 200]]]}}, \"child_runs\": [{\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_1\", \"run_number\": 4, \"metric\": 0.8021978, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:07:31.100665Z\", \"end_time\": \"2021-02-01T07:09:44.495798Z\", \"created_time\": \"2021-02-01T07:03:56.434157Z\", \"created_time_dt\": \"2021-02-01T07:03:56.434157Z\", \"duration\": \"0:05:48\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 1.4598295253449016, \"param_--max_iter\": 10, \"best_metric\": 0.8021978}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_3\", \"run_number\": 5, \"metric\": 0.83516484, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:07:31.828695Z\", \"end_time\": \"2021-02-01T07:09:38.314859Z\", \"created_time\": \"2021-02-01T07:03:56.64677Z\", \"created_time_dt\": \"2021-02-01T07:03:56.64677Z\", \"duration\": \"0:05:41\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 0.5266559380147862, \"param_--max_iter\": 100, \"best_metric\": 0.83516484}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_0\", \"run_number\": 6, \"metric\": 0.8021978, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:07:31.2628Z\", \"end_time\": \"2021-02-01T07:09:45.382625Z\", \"created_time\": \"2021-02-01T07:03:56.811879Z\", \"created_time_dt\": \"2021-02-01T07:03:56.811879Z\", \"duration\": \"0:05:48\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 0.4873075247098091, \"param_--max_iter\": 150, \"best_metric\": 0.83516484}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_2\", \"run_number\": 7, \"metric\": 0.81318681, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:07:36.384102Z\", \"end_time\": \"2021-02-01T07:09:43.856126Z\", \"created_time\": \"2021-02-01T07:03:56.824481Z\", \"created_time_dt\": \"2021-02-01T07:03:56.824481Z\", \"duration\": \"0:05:47\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 1.7940743115401825, \"param_--max_iter\": 10, \"best_metric\": 0.83516484}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_4\", \"run_number\": 8, \"metric\": 0.81318681, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:10:13.182565Z\", \"end_time\": \"2021-02-01T07:11:06.959827Z\", \"created_time\": \"2021-02-01T07:10:03.367268Z\", \"created_time_dt\": \"2021-02-01T07:10:03.367268Z\", \"duration\": \"0:01:03\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 1.4272268331852709, \"param_--max_iter\": 10, \"best_metric\": 0.83516484}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_6\", \"run_number\": 9, \"metric\": 0.79120879, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:10:12.911857Z\", \"end_time\": \"2021-02-01T07:11:10.751165Z\", \"created_time\": \"2021-02-01T07:10:03.3821Z\", \"created_time_dt\": \"2021-02-01T07:10:03.3821Z\", \"duration\": \"0:01:07\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 0.2569512325818647, \"param_--max_iter\": 150, \"best_metric\": 0.83516484}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_7\", \"run_number\": 10, \"metric\": 0.8021978, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:10:12.996339Z\", \"end_time\": \"2021-02-01T07:11:28.567652Z\", \"created_time\": \"2021-02-01T07:10:03.646846Z\", \"created_time_dt\": \"2021-02-01T07:10:03.646846Z\", \"duration\": \"0:01:24\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 0.8139609090131578, \"param_--max_iter\": 100, \"best_metric\": 0.83516484}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_5\", \"run_number\": 11, \"metric\": 0.86813187, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:10:15.347206Z\", \"end_time\": \"2021-02-01T07:11:01.439839Z\", \"created_time\": \"2021-02-01T07:10:03.890965Z\", \"created_time_dt\": \"2021-02-01T07:10:03.890965Z\", \"duration\": \"0:00:57\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 0.23892765730037274, \"param_--max_iter\": 100, \"best_metric\": 0.86813187}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_9\", \"run_number\": 12, \"metric\": 0.82417582, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:11:47.276806Z\", \"end_time\": \"2021-02-01T07:12:33.163673Z\", \"created_time\": \"2021-02-01T07:11:37.07289Z\", \"created_time_dt\": \"2021-02-01T07:11:37.07289Z\", \"duration\": \"0:00:56\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 1.2667133140354632, \"param_--max_iter\": 50, \"best_metric\": 0.86813187}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_10\", \"run_number\": 13, \"metric\": 0.83516484, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:11:48.985497Z\", \"end_time\": \"2021-02-01T07:12:41.433642Z\", \"created_time\": \"2021-02-01T07:11:37.101941Z\", \"created_time_dt\": \"2021-02-01T07:11:37.101941Z\", \"duration\": \"0:01:04\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 0.03615019772894734, \"param_--max_iter\": 100, \"best_metric\": 0.86813187}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_11\", \"run_number\": 14, \"metric\": 0.84615385, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:11:46.084198Z\", \"end_time\": \"2021-02-01T07:12:36.668481Z\", \"created_time\": \"2021-02-01T07:11:37.236149Z\", \"created_time_dt\": \"2021-02-01T07:11:37.236149Z\", \"duration\": \"0:00:59\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 0.32921678905932794, \"param_--max_iter\": 100, \"best_metric\": 0.86813187}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_8\", \"run_number\": 15, \"metric\": 0.78021978, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:11:47.877553Z\", \"end_time\": \"2021-02-01T07:12:37.331716Z\", \"created_time\": \"2021-02-01T07:11:37.241991Z\", \"created_time_dt\": \"2021-02-01T07:11:37.241991Z\", \"duration\": \"0:01:00\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 0.5378158171508237, \"param_--max_iter\": 50, \"best_metric\": 0.86813187}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_12\", \"run_number\": 16, \"metric\": 0.87912088, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:13:20.553264Z\", \"end_time\": \"2021-02-01T07:14:07.96891Z\", \"created_time\": \"2021-02-01T07:13:10.58839Z\", \"created_time_dt\": \"2021-02-01T07:13:10.58839Z\", \"duration\": \"0:00:57\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 0.2403212873957113, \"param_--max_iter\": 100, \"best_metric\": 0.87912088}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_15\", \"run_number\": 17, \"metric\": 0.87912088, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:13:20.355034Z\", \"end_time\": \"2021-02-01T07:14:16.64423Z\", \"created_time\": \"2021-02-01T07:13:11.001006Z\", \"created_time_dt\": \"2021-02-01T07:13:11.001006Z\", \"duration\": \"0:01:05\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 0.2408782377603102, \"param_--max_iter\": 100, \"best_metric\": 0.87912088}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_14\", \"run_number\": 18, \"metric\": 0.8021978, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:13:21.700717Z\", \"end_time\": \"2021-02-01T07:14:08.221349Z\", \"created_time\": \"2021-02-01T07:13:11.076135Z\", \"created_time_dt\": \"2021-02-01T07:13:11.076135Z\", \"duration\": \"0:00:57\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 1.813233127262985, \"param_--max_iter\": 200, \"best_metric\": 0.87912088}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_13\", \"run_number\": 19, \"metric\": 0.8021978, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:13:20.634735Z\", \"end_time\": \"2021-02-01T07:14:05.139922Z\", \"created_time\": \"2021-02-01T07:13:11.348361Z\", \"created_time_dt\": \"2021-02-01T07:13:11.348361Z\", \"duration\": \"0:00:53\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 1.7275798416693748, \"param_--max_iter\": 50, \"best_metric\": 0.87912088}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_16\", \"run_number\": 20, \"metric\": 0.82417582, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:14:21.920712Z\", \"end_time\": \"2021-02-01T07:15:18.693923Z\", \"created_time\": \"2021-02-01T07:14:13.220201Z\", \"created_time_dt\": \"2021-02-01T07:14:13.220201Z\", \"duration\": \"0:01:05\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 0.2410526128105645, \"param_--max_iter\": 100, \"best_metric\": 0.87912088}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_17\", \"run_number\": 21, \"metric\": 0.8021978, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:14:53.869737Z\", \"end_time\": \"2021-02-01T07:15:41.172016Z\", \"created_time\": \"2021-02-01T07:14:45.182717Z\", \"created_time_dt\": \"2021-02-01T07:14:45.182717Z\", \"duration\": \"0:00:55\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 0.1973653109734659, \"param_--max_iter\": 100, \"best_metric\": 0.87912088}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_18\", \"run_number\": 22, \"metric\": 0.82417582, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:14:55.943538Z\", \"end_time\": \"2021-02-01T07:15:36.020492Z\", \"created_time\": \"2021-02-01T07:14:45.437961Z\", \"created_time_dt\": \"2021-02-01T07:14:45.437961Z\", \"duration\": \"0:00:50\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 0.2786283137708579, \"param_--max_iter\": 100, \"best_metric\": 0.87912088}, {\"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_19\", \"run_number\": 23, \"metric\": 0.8021978, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-02-01T07:14:56.046137Z\", \"end_time\": \"2021-02-01T07:15:47.978203Z\", \"created_time\": \"2021-02-01T07:14:45.478255Z\", \"created_time_dt\": \"2021-02-01T07:14:45.478255Z\", \"duration\": \"0:01:02\", \"hyperdrive_id\": \"6719bce3-7fb3-474f-806f-8bb887ab1078\", \"arguments\": null, \"param_--C\": 0.11122143612599075, \"param_--max_iter\": 100, \"best_metric\": 0.87912088}], \"children_metrics\": {\"categories\": [0], \"series\": {\"Regularization Strength:\": [{\"categories\": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], \"mode\": \"markers\", \"name\": \"Regularization Strength:\", \"stepped\": false, \"type\": \"scatter\", \"data\": [1.4598295253449016, 0.5266559380147862, 0.4873075247098091, 1.7940743115401825, 1.4272268331852709, 0.2569512325818647, 0.8139609090131578, 0.23892765730037274, 1.2667133140354632, 0.03615019772894734, 0.32921678905932794, 0.5378158171508237, 0.2403212873957113, 0.2408782377603102, 1.813233127262985, 1.7275798416693748, 0.2410526128105645, 0.1973653109734659, 0.2786283137708579, 0.11122143612599075]}, {\"categories\": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], \"mode\": \"lines\", \"name\": \"Regularization Strength:_max\", \"stepped\": true, \"type\": \"scatter\", \"data\": [1.4598295253449016, 1.4598295253449016, 1.4598295253449016, 1.7940743115401825, 1.7940743115401825, 1.7940743115401825, 1.7940743115401825, 1.7940743115401825, 1.7940743115401825, 1.7940743115401825, 1.7940743115401825, 1.7940743115401825, 1.7940743115401825, 1.7940743115401825, 1.813233127262985, 1.813233127262985, 1.813233127262985, 1.813233127262985, 1.813233127262985, 1.813233127262985]}], \"Max iterations:\": [{\"categories\": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], \"mode\": \"markers\", \"name\": \"Max iterations:\", \"stepped\": false, \"type\": \"scatter\", \"data\": [10, 100, 150, 10, 10, 150, 100, 100, 50, 100, 100, 50, 100, 100, 200, 50, 100, 100, 100, 100]}, {\"categories\": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], \"mode\": \"lines\", \"name\": \"Max iterations:_max\", \"stepped\": true, \"type\": \"scatter\", \"data\": [10, 100, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 200, 200, 200, 200, 200, 200]}], \"accuracy\": [{\"categories\": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], \"mode\": \"markers\", \"name\": \"accuracy\", \"stepped\": false, \"type\": \"scatter\", \"data\": [0.8021978021978022, 0.8351648351648352, 0.8021978021978022, 0.8131868131868132, 0.8131868131868132, 0.7912087912087912, 0.8021978021978022, 0.8681318681318682, 0.8241758241758241, 0.8351648351648352, 0.8461538461538461, 0.7802197802197802, 0.8791208791208791, 0.8791208791208791, 0.8021978021978022, 0.8021978021978022, 0.8241758241758241, 0.8021978021978022, 0.8241758241758241, 0.8021978021978022]}, {\"categories\": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], \"mode\": \"lines\", \"name\": \"accuracy_max\", \"stepped\": true, \"type\": \"scatter\", \"data\": [0.8021978021978022, 0.8351648351648352, 0.8351648351648352, 0.8351648351648352, 0.8351648351648352, 0.8351648351648352, 0.8351648351648352, 0.8681318681318682, 0.8681318681318682, 0.8681318681318682, 0.8681318681318682, 0.8681318681318682, 0.8791208791208791, 0.8791208791208791, 0.8791208791208791, 0.8791208791208791, 0.8791208791208791, 0.8791208791208791, 0.8791208791208791, 0.8791208791208791]}]}, \"metricName\": null, \"primaryMetricName\": \"accuracy\", \"showLegend\": false}, \"run_metrics\": [{\"name\": \"best_child_by_primary_metric\", \"run_id\": \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078\", \"categories\": [0], \"series\": [{\"data\": [{\"metric_name\": [\"accuracy\", \"accuracy\", \"accuracy\", \"accuracy\"], \"timestamp\": [\"2021-02-01 07:10:04.143662+00:00\", \"2021-02-01 07:11:09.203484+00:00\", \"2021-02-01 07:14:30.589708+00:00\", \"2021-02-01 07:14:30.589708+00:00\"], \"run_id\": [\"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_3\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_5\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_12\", \"HD_6719bce3-7fb3-474f-806f-8bb887ab1078_12\"], \"metric_value\": [0.8351648351648352, 0.8681318681318682, 0.8791208791208791, 0.8791208791208791], \"final\": [false, false, false, true]}]}]}], \"run_logs\": \"[2021-02-01T07:03:23.724857][GENERATOR][INFO]Successfully sampled '4' jobs, they will soon be submitted to the execution target.\\r\\n[2021-02-01T07:03:23.589742][GENERATOR][INFO]Trying to sample '4' jobs from the hyperparameter space\\r\\n[2021-02-01T07:03:23.169547][API][INFO]Experiment created\\r\\n[2021-02-01T07:03:24.6077254Z][SCHEDULER][INFO]The execution environment is being prepared. Please be patient as it can take a few minutes.\\r\\n[2021-02-01T07:03:55.3157752Z][SCHEDULER][INFO]The execution environment was successfully prepared.\\r\\n[2021-02-01T07:03:55.3167006Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_0'\\r\\n[2021-02-01T07:03:55.3742698Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_3'\\r\\n[2021-02-01T07:03:55.4204628Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_2'\\r\\n[2021-02-01T07:03:55.4854317Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_1'\\r\\n[2021-02-01T07:03:56.6703161Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_1'\\r\\n[2021-02-01T07:03:56.8829171Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_3'\\r\\n[2021-02-01T07:03:57.0257291Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_0'\\r\\n[2021-02-01T07:03:57.0502945Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_2'\\r\\n[2021-02-01T07:09:57.760432][GENERATOR][INFO]Trying to sample '4' jobs from the hyperparameter space\\r\\n[2021-02-01T07:09:58.093154][GENERATOR][INFO]Successfully sampled '4' jobs, they will soon be submitted to the execution target.\\r\\n[2021-02-01T07:10:02.5415608Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_4'\\r\\n[2021-02-01T07:10:02.6188260Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_6'\\r\\n[2021-02-01T07:10:02.5603613Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_5'\\r\\n[2021-02-01T07:10:02.6335263Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_7'\\r\\n[2021-02-01T07:10:03.4804371Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_4'\\r\\n[2021-02-01T07:10:03.4880525Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_6'\\r\\n[2021-02-01T07:10:03.7892183Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_7'\\r\\n[2021-02-01T07:10:04.1163276Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_5'\\r\\n[2021-02-01T07:11:29.915216][GENERATOR][INFO]Trying to sample '4' jobs from the hyperparameter space\\r\\n[2021-02-01T07:11:31.626981][GENERATOR][INFO]Successfully sampled '4' jobs, they will soon be submitted to the execution target.\\r\\n[2021-02-01T07:11:36.0531322Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_11'\\r\\n[2021-02-01T07:11:36.1481494Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_8'\\r\\n[2021-02-01T07:11:36.1347917Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_9'\\r\\n[2021-02-01T07:11:36.0750694Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_10'\\r\\n[2021-02-01T07:11:37.2856792Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_9'\\r\\n[2021-02-01T07:11:37.4892929Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_8'\\r\\n[2021-02-01T07:11:37.4795484Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_10'\\r\\n[2021-02-01T07:11:37.3680136Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_11'\\r\\n[2021-02-01T07:13:02.784751][GENERATOR][INFO]Trying to sample '4' jobs from the hyperparameter space\\r\\n[2021-02-01T07:13:05.231323][GENERATOR][INFO]Successfully sampled '4' jobs, they will soon be submitted to the execution target.\\r\\n[2021-02-01T07:13:10.0433464Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_14'\\r\\n[2021-02-01T07:13:09.9606417Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_15'\\r\\n[2021-02-01T07:13:10.1593835Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_12'\\r\\n[2021-02-01T07:13:10.1365756Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_13'\\r\\n[2021-02-01T07:13:10.7047281Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_12'\\r\\n[2021-02-01T07:13:11.5068533Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_14'\\r\\n[2021-02-01T07:13:11.1127493Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_15'\\r\\n[2021-02-01T07:13:11.4890879Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_13'\\r\\n[2021-02-01T07:14:06.008852][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-02-01T07:14:07.193951][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-02-01T07:14:12.7792934Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_16'\\r\\n[2021-02-01T07:14:13.3111417Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_16'\\r\\n[2021-02-01T07:14:38.010733][GENERATOR][INFO]Trying to sample '3' jobs from the hyperparameter space\\r\\n[2021-02-01T07:14:41.155651][GENERATOR][INFO]Successfully sampled '3' jobs, they will soon be submitted to the execution target.\\r\\n[2021-02-01T07:14:44.4403341Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_17'\\r\\n[2021-02-01T07:14:44.4405785Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_18'\\r\\n[2021-02-01T07:14:44.4404560Z][SCHEDULER][INFO]Scheduling job, id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_19'\\r\\n[2021-02-01T07:14:45.3397122Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_17'\\r\\n[2021-02-01T07:14:45.6706643Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_18'\\r\\n[2021-02-01T07:14:45.6974556Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_6719bce3-7fb3-474f-806f-8bb887ab1078_19'\\r\\n[2021-02-01T07:15:12.097259][GENERATOR][INFO]Max number of jobs '20' reached for experiment.\\r\\n[2021-02-01T07:15:12.223043][GENERATOR][INFO]All jobs generated.\\r\\n[2021-02-01T07:16:14.983081][CONTROLLER][INFO]Experiment was 'ExperimentStatus.RUNNING', is 'ExperimentStatus.FINISHED'.\\n\\nRun is completed.\", \"graph\": {}, \"widget_settings\": {\"childWidgetDisplay\": \"popup\", \"send_telemetry\": false, \"log_level\": \"INFO\", \"sdk_version\": \"1.20.0\"}, \"loading\": false}"
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "RunId: HD_6719bce3-7fb3-474f-806f-8bb887ab1078\n",
+            "Web View: https://ml.azure.com/experiments/Heart_Disease_Kaggle/runs/HD_6719bce3-7fb3-474f-806f-8bb887ab1078?wsid=/subscriptions/48a74bb7-9950-4cc1-9caa-5d50f995cc55/resourcegroups/aml-quickstarts-136793/workspaces/quick-starts-ws-136793\n",
+            "\n",
+            "Streaming azureml-logs/hyperdrive.txt\n",
+            "=====================================\n",
+            "\n",
+            "\"<START>[2021-02-01T07:03:23.724857][GENERATOR][INFO]Successfully sampled '4' jobs, they will soon be submitted to the execution target.<END>\\n\"\"<START>[2021-02-01T07:03:23.589742][GENERATOR][INFO]Trying to sample '4' jobs from the hyperparameter space<END>\\n\"\"<START>[2021-02-01T07:03:23.169547][API][INFO]Experiment created<END>\\n\"<START>[2021-02-01T07:03:24.6077254Z][SCHEDULER][INFO]The execution environment is being prepared. Please be patient as it can take a few minutes.<END>\n",
+            "\n",
+            "Execution Summary\n",
+            "=================\n",
+            "RunId: HD_6719bce3-7fb3-474f-806f-8bb887ab1078\n",
+            "Web View: https://ml.azure.com/experiments/Heart_Disease_Kaggle/runs/HD_6719bce3-7fb3-474f-806f-8bb887ab1078?wsid=/subscriptions/48a74bb7-9950-4cc1-9caa-5d50f995cc55/resourcegroups/aml-quickstarts-136793/workspaces/quick-starts-ws-136793\n",
+            "\n"
+          ]
+        },
+        {
+          "output_type": "execute_result",
+          "execution_count": 10,
+          "data": {
+            "text/plain": "{'runId': 'HD_6719bce3-7fb3-474f-806f-8bb887ab1078',\n 'target': 'cpu-cluster',\n 'status': 'Completed',\n 'startTimeUtc': '2021-02-01T07:03:22.888776Z',\n 'endTimeUtc': '2021-02-01T07:16:14.700969Z',\n 'properties': {'primary_metric_config': '{\"name\": \"accuracy\", \"goal\": \"maximize\"}',\n  'resume_from': 'null',\n  'runTemplate': 'HyperDrive',\n  'azureml.runsource': 'hyperdrive',\n  'platform': 'AML',\n  'ContentSnapshotId': 'cde732d9-519c-49a8-b60f-08000d82641e',\n  'score': '0.8791208791208791',\n  'best_child_run_id': 'HD_6719bce3-7fb3-474f-806f-8bb887ab1078_12',\n  'best_metric_status': 'Succeeded'},\n 'inputDatasets': [],\n 'outputDatasets': [],\n 'logFiles': {'azureml-logs/hyperdrive.txt': 'https://mlstrg136793.blob.core.windows.net/azureml/ExperimentRun/dcid.HD_6719bce3-7fb3-474f-806f-8bb887ab1078/azureml-logs/hyperdrive.txt?sv=2019-02-02&sr=b&sig=7%2Bs5uQ5jBViIZpb3uzkhTVQhHH0N2INp1bFEHviyruE%3D&st=2021-02-01T07%3A06%3A42Z&se=2021-02-01T15%3A16%3A42Z&sp=r'},\n 'submittedBy': 'ODL_User 136793'}"
+          },
+          "metadata": {}
+        }
+      ],
+      "execution_count": 10,
+      "metadata": {
+        "gather": {
+          "logged": 1598546648408
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "scrolled": true
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Best Model\n",
+        "\n",
+        "TODO: In the cell below, get the best model from the hyperdrive experiments and display all the properties of the model."
+      ],
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import joblib\n",
+        "# Get your best run and save the model from that run.\n",
+        "\n",
+        "best_run = run.get_best_run_by_primary_metric()\n",
+        "best_run_metrics = best_run.get_metrics()\n",
+        "parameter_values = best_run.get_details()['runDefinition']['arguments']\n",
+        "print('Best Run ID: ', best_run.id)\n",
+        "print('Best Run Accuracy: ', best_run_metrics['accuracy'])\n",
+        "print('Best Run Learning Rate: ', parameter_values[3])\n",
+        "print('Parameter Values: ', parameter_values)"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Best Run ID:  HD_5befb7ca-5b0c-4707-a6ec-2541f7d9f1c1_16\n",
+            "Best Run Accuracy:  0.9120879120879121\n",
+            "Best Run Learning Rate:  32\n",
+            "Parameter Values:  ['--C', '1.520294971569766', '--max_iter', '32']\n"
+          ]
+        }
+      ],
+      "execution_count": 43,
+      "metadata": {
+        "gather": {
+          "logged": 1598546650307
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import joblib\n",
+        "\n",
+        "#TODO: Save the best model\n",
+        "\n",
+        "registered_model = best_run.register_model(model_name='heart_disease_hyperdrive_best_model', model_path='./outputs/model.joblib')\n",
+        "print(\"Model successfully saved.\")"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Model successfully saved.\n"
+          ]
+        }
+      ],
+      "execution_count": 52,
+      "metadata": {
+        "gather": {
+          "logged": 1598546657829
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "best_run.get_file_names()"
+      ],
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "execution_count": 54,
+          "data": {
+            "text/plain": "['azureml-logs/55_azureml-execution-tvmps_7c48ac768fcb656c11b1399ebadceb9ffa635af34b1dc96253c47f71083dbcbf_d.txt',\n 'azureml-logs/65_job_prep-tvmps_7c48ac768fcb656c11b1399ebadceb9ffa635af34b1dc96253c47f71083dbcbf_d.txt',\n 'azureml-logs/70_driver_log.txt',\n 'azureml-logs/75_job_post-tvmps_7c48ac768fcb656c11b1399ebadceb9ffa635af34b1dc96253c47f71083dbcbf_d.txt',\n 'azureml-logs/process_info.json',\n 'azureml-logs/process_status.json',\n 'logs/azureml/105_azureml.log',\n 'logs/azureml/job_prep_azureml.log',\n 'logs/azureml/job_release_azureml.log',\n 'outputs/model.joblib']"
+          },
+          "metadata": {}
+        }
+      ],
+      "execution_count": 54,
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "best_run"
+      ],
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "execution_count": 55,
+          "data": {
+            "text/html": "<table style=\"width:100%\"><tr><th>Experiment</th><th>Id</th><th>Type</th><th>Status</th><th>Details Page</th><th>Docs Page</th></tr><tr><td>Heart_Disease_Kaggle</td><td>HD_5befb7ca-5b0c-4707-a6ec-2541f7d9f1c1_16</td><td>azureml.scriptrun</td><td>Completed</td><td><a href=\"https://ml.azure.com/experiments/Heart_Disease_Kaggle/runs/HD_5befb7ca-5b0c-4707-a6ec-2541f7d9f1c1_16?wsid=/subscriptions/5a4ab2ba-6c51-4805-8155-58759ad589d8/resourcegroups/aml-quickstarts-136719/workspaces/quick-starts-ws-136719\" target=\"_blank\" rel=\"noopener\">Link to Azure Machine Learning studio</a></td><td><a href=\"https://docs.microsoft.com/en-us/python/api/azureml-core/azureml.core.run.Run?view=azure-ml-py\" target=\"_blank\" rel=\"noopener\">Link to Documentation</a></td></tr></table>",
+            "text/plain": "Run(Experiment: Heart_Disease_Kaggle,\nId: HD_5befb7ca-5b0c-4707-a6ec-2541f7d9f1c1_16,\nType: azureml.scriptrun,\nStatus: Completed)"
+          },
+          "metadata": {}
+        }
+      ],
+      "execution_count": 55,
+      "metadata": {}
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Model Deployment\n",
+        "\n",
+        "Remember you have to deploy only one of the two models you trained.. Perform the steps in the rest of this notebook only if you wish to deploy this model.\n",
+        "\n",
+        "TODO: In the cell below, register the model, create an inference config and deploy the model as a web service."
+      ],
+      "metadata": {
+        "collapsed": true,
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "outputs": [],
+      "execution_count": null,
+      "metadata": {}
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "TODO: In the cell below, send a request to the web service you deployed to test it."
+      ],
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "outputs": [],
+      "execution_count": null,
+      "metadata": {}
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "TODO: In the cell below, print the logs of the web service and delete the service"
+      ],
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "outputs": [],
+      "execution_count": null,
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "kernel_info": {
+      "name": "python3"
+    },
+    "kernelspec": {
+      "name": "python3",
+      "language": "python",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python",
+      "version": "3.6.9",
+      "mimetype": "text/x-python",
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "pygments_lexer": "ipython3",
+      "nbconvert_exporter": "python",
+      "file_extension": ".py"
+    },
+    "nteract": {
+      "version": "nteract-front-end@1.0.0"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 2
+}

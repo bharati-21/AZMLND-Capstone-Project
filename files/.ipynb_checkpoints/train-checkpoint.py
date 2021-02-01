@@ -12,22 +12,56 @@ from azureml.core import Dataset
 from azureml.data.dataset_factory import TabularDatasetFactory
 
 
+def transform_data(data):
+    
+    # categorical columns in the dataset
+    categorical_columns = ['sex', 'chest_pain_type', 'fasting_blood_sugar', 'rest_ecg', 'exercise_induced_angina', 'st_slope', 'num_major_vessels', 'thalassemia']
+
+    # converting the categorical columns to object type
+    data['sex'] = data['sex'].astype('object')
+    data['chest_pain_type'] = data['chest_pain_type'].astype('object')
+    data['fasting_blood_sugar'] = data['fasting_blood_sugar'].astype('object')
+    data['rest_ecg'] = data['rest_ecg'].astype('object')
+    data['exercise_induced_angina'] = data['exercise_induced_angina'].astype('object')
+    data['st_slope'] = data['st_slope'].astype('object')
+    data['num_major_vessels'] = data['num_major_vessels'].astype('object')
+    data['thalassemia'] = data['thalassemia'].astype('object')
+    
+    # encode the data
+    dataset = pd.get_dummies(data, columns= categorical_columns, drop_first= True)
+    
+    return dataset
+
+
 def clean_data(data):
     # Changing name of columns to understand the data better 
     data_df = data.to_pandas_dataframe()
     data_df.columns = ['age', 'sex', 'chest_pain_type', 'resting_BP', 'cholesterol', 'fasting_blood_sugar', 'rest_ecg', 'max_heart_rate',
        'exercise_induced_angina', 'st_depression', 'st_slope', 'num_major_vessels', 'thalassemia', 'target']
     
+    # changing the categorical data
+    dataset = transform_data(data_df)
+    
+    print(dataset.columns)
+    print(dataset.shape)
+
     # Dropping the target column 'target' from the dataset
-    y_df = data_df.target
-    x_df = data_df.drop('target', axis = 1)
+    y_df = dataset.target
+    x_df = dataset.drop('target', axis = 1)
     
     # The data has no NaN/ null values. 
-    # Encode the categorical column 'thalassemia' using LabelEncoder
-    label_encoder = LabelEncoder()
-    x_df["thalassemia"] = label_encoder.fit_transform(x_df['thalassemia'])
     
     return x_df, y_df
+
+# +
+url_path = "https://raw.githubusercontent.com/bharati-21/AZMLND-Capstone-Project/master/files/heart.csv"
+ds = Dataset.Tabular.from_delimited_files(path=url_path)
+
+x, y = clean_data(ds)
+print(x.shape, y.shape)
+
+
+# -
 
 def main():
     # Add arguments to script

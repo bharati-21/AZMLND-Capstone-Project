@@ -10,3 +10,5 @@
 2021-01-31 14:58:39.039 - INFO - 2876 - azureml.automl.runtime.featurization.data_transformer.__init__:185 - Feature sweeping timeout: 86400
 2021-01-31 14:58:55.959 - INFO - 2876 - azureml.train.automl._model_download_utilities._log_activity:92 - ActivityCompleted: Activity=DownloadModel, HowEnded=Success, Duration=30245.7[ms]
 2021-01-31 14:58:55.959 - INFO - 2876 - azureml.train.automl.run._log_activity:92 - ActivityCompleted: Activity=GetOutput, HowEnded=Success, Duration=30400.03[ms]
+2021-02-01 07:21:46.878 - INFO - 19119 - azureml.train.automl.automlconfig._start_execution:208 - Submitting remote.
+2021-02-01 07:46:02.375 - INFO - 24152 - azureml.train.automl.automlconfig._start_execution:208 - Submitting remote.

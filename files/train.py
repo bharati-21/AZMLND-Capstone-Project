@@ -1,5 +1,6 @@
 from sklearn.linear_model import LogisticRegression
 import argparse
+from sklearn.metrics import accuracy_score
 import os
 import numpy as np
 from sklearn.metrics import mean_squared_error
@@ -12,55 +13,84 @@ from azureml.core import Dataset
 from azureml.data.dataset_factory import TabularDatasetFactory
 
 
-def transform_data(data):
-    
-    # categorical columns in the dataset
-    categorical_columns = ['sex', 'chest_pain_type', 'fasting_blood_sugar', 'rest_ecg', 'exercise_induced_angina', 'st_slope', 'num_major_vessels', 'thalassemia']
+def replace_categorical_values(df):
+    sex = {0: 'Female', 1: 'Male'}
+    cp = {0: "typical_angina", 
+          1: "atypical_angina", 
+          2:"non-anginal pain",
+          3: "asymtomatic"}
+    exang = {0: "No", 1: "Yes"}
+    fbs = {0: "less_than_120", 1: "greater_than_120"}
+    slope = {0: "upsloping", 1: "flat", 2: "downsloping"}
+    thal = {1: "fixed_defect", 2: "reversible_defect", 3:"normal"}
+    restecg = {0: 'normal', 1: 'ST-T_wave_abnormality' , 2: 'left_ventricular_hypertrophy'}
 
-    # converting the categorical columns to object type
-    data['sex'] = data['sex'].astype('object')
-    data['chest_pain_type'] = data['chest_pain_type'].astype('object')
-    data['fasting_blood_sugar'] = data['fasting_blood_sugar'].astype('object')
-    data['rest_ecg'] = data['rest_ecg'].astype('object')
-    data['exercise_induced_angina'] = data['exercise_induced_angina'].astype('object')
-    data['st_slope'] = data['st_slope'].astype('object')
-    data['num_major_vessels'] = data['num_major_vessels'].astype('object')
-    data['thalassemia'] = data['thalassemia'].astype('object')
+    df.sex = df.sex.replace(sex)
+    df.cp = df.cp.replace(cp)
+    df.exang = df.exang.replace(exang)
+    df.fbs = df.fbs.replace(fbs)
+    df.slope = df.slope.replace(slope)
+    df.thal = df.thal.replace(thal)
+    df.restecg = df.restecg.replace(restecg)
+    
+    return df
+
+
+def transform_data(df):
+    # ca extra cateogry 0, remove that and fill with median
+    df.loc[df.ca == 4, 'ca'] = np.NaN
+    df.ca = df.ca.fillna(df.ca.median())
+    
+    # thal has extra category 0, remove that and fill with median
+    df.loc[df.thal == 0, 'thal'] = np.NaN
+    df.thal = df.thal.fillna(df.thal.median())
+    
+    # There is one duplicate entry, remove that
+    df.drop_duplicates(keep='first', inplace=True)
+    
+    df = replace_categorical_values(df)
+    
+    # Changing name of columns to understand the data better 
+    df.columns = df.columns = ['age', 'sex', 'chest_pain_yype', 'resting_BP', 'cholesterol', 'fasting_blood_sugar', 'rest_ECG', 'max_heart_rate',
+       'exercise_induced_angina', 'st_depression', 'st_slope', 'num_major_vessels', 'thalassemia', 'target']
     
     # encode the data
-    dataset = pd.get_dummies(data, columns= categorical_columns, drop_first= True)
+    data = data = pd.get_dummies(df, drop_first=True)
     
-    return dataset
+    return data
 
 
 def clean_data(data):
-    # Changing name of columns to understand the data better 
-    data_df = data.to_pandas_dataframe()
-    data_df.columns = ['age', 'sex', 'chest_pain_type', 'resting_BP', 'cholesterol', 'fasting_blood_sugar', 'rest_ecg', 'max_heart_rate',
-       'exercise_induced_angina', 'st_depression', 'st_slope', 'num_major_vessels', 'thalassemia', 'target']
+    df = data.to_pandas_dataframe()
     
     # changing the categorical data
-    dataset = transform_data(data_df)
+    data = transform_data(df)
     
-    print(dataset.columns)
-    print(dataset.shape)
+    print(data.columns)
+    print(data.shape)
 
     # Dropping the target column 'target' from the dataset
-    y_df = dataset.target
-    x_df = dataset.drop('target', axis = 1)
+    y_df = data.target
+    x_df = data.drop('target', axis = 1)
     
     # The data has no NaN/ null values. 
     
     return x_df, y_df
 
 # +
-url_path = "https://raw.githubusercontent.com/bharati-21/AZMLND-Capstone-Project/master/files/heart.csv"
-ds = Dataset.Tabular.from_delimited_files(path=url_path)
+# url_path = "https://raw.githubusercontent.com/bharati-21/AZMLND-Capstone-Project/master/files/heart.csv"
+# ds = Dataset.Tabular.from_delimited_files(path=url_path)
 
-x, y = clean_data(ds)
-print(x.shape, y.shape)
+# X, y = clean_data(ds)
+# print(X.shape, y.shape)
 
+# X_train, X_test,y_train, y_test=train_test_split(X,y,test_size=0.2)
 
+# log_reg = LogisticRegression()
+
+# model = log_reg.fit(X_train,y_train)
+# prediction = model.predict(X_test)
+# accuracy_score(y_test,prediction)
 # -
 
 def main():

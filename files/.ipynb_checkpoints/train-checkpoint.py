@@ -13,28 +13,29 @@ from azureml.core import Dataset
 from azureml.data.dataset_factory import TabularDatasetFactory
 
 
-def replace_categorical_values(df):
-    sex = {0: 'Female', 1: 'Male'}
-    cp = {0: "typical_angina", 
-          1: "atypical_angina", 
-          2:"non-anginal pain",
-          3: "asymtomatic"}
-    exang = {0: "No", 1: "Yes"}
-    fbs = {0: "less_than_120", 1: "greater_than_120"}
-    slope = {0: "upsloping", 1: "flat", 2: "downsloping"}
-    thal = {1: "fixed_defect", 2: "reversible_defect", 3:"normal"}
-    restecg = {0: 'normal', 1: 'ST-T_wave_abnormality' , 2: 'left_ventricular_hypertrophy'}
+# +
+# def replace_categorical_values(df):
+#    sex = {0: 'Female', 1: 'Male'}
+#    cp = {0: "typical_angina", 
+#          1: "atypical_angina", 
+#          2:"non-anginal pain",
+#          3: "asymtomatic"}
+#    exang = {0: "No", 1: "Yes"}
+#    fbs = {0: "less_than_120", 1: "greater_than_120"}
+#    slope = {0: "upsloping", 1: "flat", 2: "downsloping"}
+#    thal = {1: "fixed_defect", 2: "reversible_defect", 3:"normal"}
+#    restecg = {0: 'normal', 1: 'ST-T_wave_abnormality' , 2: 'left_ventricular_hypertrophy'}
 
-    df.sex = df.sex.replace(sex)
-    df.cp = df.cp.replace(cp)
-    df.exang = df.exang.replace(exang)
-    df.fbs = df.fbs.replace(fbs)
-    df.slope = df.slope.replace(slope)
-    df.thal = df.thal.replace(thal)
-    df.restecg = df.restecg.replace(restecg)
+#   df.sex = df.sex.replace(sex)
+#    df.cp = df.cp.replace(cp)
+#    df.exang = df.exang.replace(exang)
+#    df.fbs = df.fbs.replace(fbs)
+#    df.slope = df.slope.replace(slope)
+#    df.thal = df.thal.replace(thal)
+#    df.restecg = df.restecg.replace(restecg)
     
-    return df
-
+#    return df
+# -
 
 def transform_data(df):
     # ca extra cateogry 0, remove that and fill with median
@@ -46,16 +47,17 @@ def transform_data(df):
     df.thal = df.thal.fillna(df.thal.median())
     
     # There is one duplicate entry, remove that
-    df.drop_duplicates(keep='first', inplace=True)
-    
-    df = replace_categorical_values(df)
-    
+    df.drop_duplicates(keep='first',inplace=True)
+        
     # Changing name of columns to understand the data better 
-    df.columns = df.columns = ['age', 'sex', 'chest_pain_yype', 'resting_BP', 'cholesterol', 'fasting_blood_sugar', 'rest_ECG', 'max_heart_rate',
+    df.columns = df.columns = ['age', 'sex', 'chest_pain_type', 'resting_BP', 'cholesterol', 'fasting_blood_sugar', 'rest_ECG', 'max_heart_rate',
        'exercise_induced_angina', 'st_depression', 'st_slope', 'num_major_vessels', 'thalassemia', 'target']
+
+    categorical_values = ['sex', 'chest_pain_type', 'fasting_blood_sugar', 'rest_ECG', 
+                          'exercise_induced_angina', 'st_slope', 'num_major_vessels', 'thalassemia']
     
     # encode the data
-    data = data = pd.get_dummies(df, drop_first=True)
+    data = pd.get_dummies(df, columns=categorical_values, drop_first=True)
     
     return data
 
@@ -66,8 +68,8 @@ def clean_data(data):
     # changing the categorical data
     data = transform_data(df)
     
-    print(data.columns)
-    print(data.shape)
+    # print(data.columns)
+    print("Shape of dataset before split:", data.shape)
 
     # Dropping the target column 'target' from the dataset
     y_df = data.target
@@ -82,9 +84,9 @@ def clean_data(data):
 # ds = Dataset.Tabular.from_delimited_files(path=url_path)
 
 # X, y = clean_data(ds)
-# print(X.shape, y.shape)
+# print("Data Shape after split:", X.shape, y.shape)
 
-# X_train, X_test,y_train, y_test=train_test_split(X,y,test_size=0.2)
+# X_train, X_test,y_train, y_test=train_test_split(X, y, test_size=0.2, random_state = 42)
 
 # log_reg = LogisticRegression()
 

@@ -13,6 +13,7 @@ dependencies:
 - pip:
   - azureml-defaults
 - numpy
+- scikit-learn
 channels:
 - anaconda
 - conda-forge

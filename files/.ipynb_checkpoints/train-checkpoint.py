@@ -38,7 +38,7 @@ from azureml.data.dataset_factory import TabularDatasetFactory
 # -
 
 def transform_data(df):
-    # ca extra cateogry 0, remove that and fill with median
+    # ca extra cateogry 4, remove that and fill with median
     df.loc[df.ca == 4, 'ca'] = np.NaN
     df.ca = df.ca.fillna(df.ca.median())
     

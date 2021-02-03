@@ -128,7 +128,7 @@ def main():
     run.log("accuracy", np.float(accuracy))
    
     os.makedirs('outputs', exist_ok=True)
-    joblib.dump(value=model,filename='outputs/model.pkl')
+    joblib.dump(value=model,filename='outputs/hyperdrive-heart-disease.pkl')
 
 if __name__ == '__main__':
     main()

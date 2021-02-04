@@ -1,5 +1,4 @@
-# MACHINE LEARNING ENGINEER WITH MICROSOFT AZURE NANODEGREE PROGRAM BY UDACITY - CAPSTONE PROJECT
-<hr/>
+# MACHINE LEARNING ENGINEER WITH MICROSOFT AZURE NANODEGREE PROGRAM BY UDACITY - CAPSTONE PROJECT  
 
 ## TABLE OF CONTENTS
 * [Project Overview](#project-overview)
@@ -26,7 +25,10 @@
 <hr/>
 
 ## Project Set Up and Installation
-*OPTIONAL:* If your project has any special installation steps, this is where you should put it. To turn this project into a professional portfolio project, you are encouraged to explain how to set up this project in AzureML.
+* In this project, the Azure ML lab offered by Udacity was used. Hence, the Workspace was already set up and ready.
+* A compute instance `compute-project` was created with STANDARD_DS3_V2 VM size. 
+![Image of Compute Instance](Images/compute_instance.png)
+* The starter files from this [project repository](https://github.com/udacity/nd00333-capstone) were forked and cloned to the workspace.
 
 ## Dataset
 

@@ -1,8 +1,29 @@
-*NOTE:* This file is a template that you can use to create the README for your project. The *TODO* comments below will highlight the information you should be sure to include.
+# MACHINE LEARNING ENGINEER WITH MICROSOFT AZURE NANODEGREE PROGRAM BY UDACITY - CAPSTONE PROJECT
+<hr/>
 
-# Your Project Title Here
+## TABLE OF CONTENTS
+* [Project Overview](#project-overview)
+* [Project Set Up and Installation](#project-set-up-and-installation)
+* [Dataset](#dataset)
+  * [Overview](#overview)
+  * [Task](#task)
+  * [Access](#access)
+* [Automated ML](#automated-ml)
+  * [Results](#results)
+* [Hyperparameter Tuning](#hyperparameter-tuning)
+  * [Results](#results)
+* [Model Deployment](#model-deployment)
+* [Screen Recording](#screen-recording)
+<hr/>
 
-*TODO:* Write a short introduction to your project.
+## Project Overview
+> This project is part of the Udacity's Machine Learning Engineer with Microsoft Azure Nanodegree Project.
+
+* In this project, two models were created:
+  * Using Automated ML (AutoML)
+  * Using customized model whose hyperparameters were tuned using ***HyperDrive***.
+* The performance of both the models were compared and the best _performing model was deployed_.
+<hr/>
 
 ## Project Set Up and Installation
 *OPTIONAL:* If your project has any special installation steps, this is where you should put it. To turn this project into a professional portfolio project, you are encouraged to explain how to set up this project in AzureML.

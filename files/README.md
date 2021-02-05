@@ -88,11 +88,74 @@
 
 ## Automated ML
 *TODO*: Give an overview of the `automl` settings and configuration you used for this experiment
-
+* ***Automated Machine Learning (AutoML)***
+  * AutoML is the process of automating the time consuming, iterative tasks of machine learning model development. 
+  * It helps in developeing ML models with high scale, efficiency, and productivity all while sustaining model quality. 
+* ***Steps involved in developing the model:***
+  * Training a model with the given dataset was identified to be a `_classification_` task since the goal was to predict whether a person has heart disease or not.
+  * In this project `_Python SDK_` was used to complete the task. But the Azure ML studio designer can also be used to train the model.
+  * A remote ML compute cluster, `_cpu-cluster_`, was used to train the models on the dataset. The dedicated virtual machine size of the compute cluster was `STANDARD_DS12_V2`, with `1 minumum and 6 maximum number of nodes` and `CPU as the Processing unit`.
+  * AutoMLConfig Class was used to create the configurations for submitting the AutoML run experiment.   
+    * The settings created for the AutoML run was:
+      * `Experiment Timeout (experiment_timeout_minutes)`: Maximum amount of time (in minutes) that all iterations combined can take before the experiment terminates.
+      * `Primary Metric (primary_metric)`: The primary metric which is used to evaluate every run. In this case, accuracy is the primary metric to be evaluated.
+      * `Cross Validations (n_cross_validations)`: Specifies the number of cross validations that needs to be performed on each model by splitting the dataset into n subsets.
+      ``` 
+      automl_settings = {
+       "experiment_timeout_minutes": 30,
+       "primary_metric": 'accuracy',
+       n_cross_validations = 5,
+      }
+      ```
+      
+    * The AutoMLConfg object that would be submitted to the experiment was defined as followed:
+      * Task to be performed (task): The tpye of task that needs to be run such as classification, regression, forecasting etc. In this project classification is the task to be performed.
+      * Training Data (training_data) = The TabularDataset that contains the training data.
+      * Label Column (label_column_name): Name of the column that needs to be predicted. In this case the column that contains "yes" or "no" to perform classification.
+      * Compute Target (compute_target): The cluster used to run the experiment on.
+      ```
+      automl_config = AutoMLConfig (
+        task = 'classification',
+        training_data = train_data,
+        label_column_name = "target",
+        enable_onnx_compatible_models = True,
+        compute_target = cpu_cluster,
+        **automl_settings
+      )
+      ```
+  * Submit the training run.
+    * The run was submitted to the experiment and AutoMLConfig object was passed as a parameter to the run"
+    ```
+    remote_run = experiment.submit(automl_config, show_output = True)
+    ```
 ### Results
 *TODO*: What are the results you got with your automated ML model? What were the parameters of the model? How could you have improved it?
-
-*TODO* Remeber to provide screenshots of the `RunDetails` widget as well as a screenshot of the best model trained with it's parameters.
+* Once submitted the progress of the run was observed via the run widget of the _`RunDetails`_ class in the Jupyter notebook. 
+  ```
+  from azureml.widgets import RunDetails
+  RunDetails(remote_run).show()
+  ```
+  ![Image of Run Widget](Images/autoML_run_widget.png)
+* The following Algorithms were used on the dataset to retrieve the trained model:
+  1. `LogisticRegression`
+  1. `XGBoostClassifier`
+  1. `LightGBM`
+  1. `RandomForest`
+  1. `SVM`
+  1. `GradientBoosting`
+  1. `ExtremeRandomTree`
+  1. `KNN`
+  1. `VotingEnsemble`
+* The best model obtained post training with the highest accuracy was a `VotingEnsemble` algorithm with an accuracy of _`0.8380`_. 
+* The best model was then registered with the provided workspace using the _`register()`_ method of _`Model`_ class.
+  ```
+  description = "AutoML model trained on the Kaggle Heart Disease UCI Dataset"
+  joblib.dump(fitted_model, filename="outputs/automl-heart-disease.pkl") # saving the model locally
+  automl_model = remote_run.register_model(model_name='automl-heart-disease', description=description)
+  ```
+  * `workspace`: Workspace name to register the model with.
+  * `model_name`: The name to register the model with.
+  * `description`: A text description of the model.
 
 ## Hyperparameter Tuning
 *TODO*: What kind of model did you choose for this experiment and why? Give an overview of the types of parameters and their ranges used for the hyperparameter search

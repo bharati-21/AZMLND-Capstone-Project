@@ -23,10 +23,12 @@
   * Using Automated ML (AutoML)
   * Using customized model whose hyperparameters were tuned using ***HyperDrive***.
 * The performance of both the models were compared and the best _performing model was deployed_.
+
 ### Project Architecture
 * The image below shows the workflow and architecutre used in the project.
 
   ![Image of Projct Architecture](Images/CP_Architecture.png)
+  
 ## Project Set Up and Installation
 * In this project, the Azure ML lab offered by Udacity was used. Hence, the Workspace was already set up and ready.
 * A compute instance `compute-project` was created with STANDARD_DS3_V2 VM size. 
@@ -38,6 +40,7 @@
 
 ## Dataset
 * A dataset external to the Azure ML ecosystem was chosen to train the AutoML and HyperDrive runs.
+
 ### Overview
 * To train the models, the [Heart Disease UCI](https://www.kaggle.com/ronitf/heart-disease-uci) dataset was used from [Kaggle](https://www.kaggle.com).
 * This dataset originally contains 76 attributes and was taken from the [UCI Machine Learning Repository Archive](https://archive.ics.uci.edu/ml/datasets/Heart+Disease).
@@ -78,11 +81,13 @@
   * `Target (target)`: The presence of absence of heart disease in the patient.
     * 0: Absence
     * 1: Presence
+    
 ### Task
 * The goal of the project was to train the model to predict whether a patient has heart disease or not.
 * The features used to train the model were:
   * `Age (age)`, `Sex (sex)`, `Chest pain type (cp)`, `Resting Blood Pressure (trestbps)`, `Cholesterol (chol)`, `Fasting Bloos Sugar (fbs)`, `Resting Electrocardiographic (restecg)`, `Maximum Heart Rate Achieved (thalach)`, `Exercise induced Angina (exang)`, `ST depression induced by exercise (oldpeak)`, `Slope (slope)`, `Number of major vessels (ca)`, `Thalassemia (thal)`
 * The prediction column is `Target (target)` which is used by the model to predict whether a person has heart disease or not
+
 ### Access
 * The dataset was uploaded and registered to the Azure default datastore as a Tabular Dataset using the [csv file](heart.csv).
   ```
@@ -93,9 +98,10 @@
 <hr/>
 
 ## Automated ML
-* ***Automated Machine Learning (AutoML)***
+* ***Automated Machine Learning (AutoML):***
   * AutoML is the process of automating the time consuming, iterative tasks of machine learning model development. 
   * It helps in developeing ML models with high scale, efficiency, and productivity all while sustaining model quality. 
+  
 * ***Steps involved in developing the model:***
   * Training a model with the given dataset was identified to be a `_classification_` task since the goal was to predict whether a person has heart disease or not.
   * In this project `_Python SDK_` was used to complete the task. But the Azure ML studio designer can also be used to train the model.
@@ -154,10 +160,14 @@
   ![Image of Completed AutoML Run Details](Images/CP_autoML_completed_run_details.png)
     
 * The best model obtained post training with the highest accuracy was a `VotingEnsemble` algorithm with an accuracy of _`0.8380`_. 
-* ***Voting Ensemble Algorithm***
+* `ensembled_iterations: [26, 16, 0, 1, 4]`
+* `ensemble_weights: [0.3333333333333333, 0.16666666666666666, 0.16666666666666666, 0.16666666666666666, 0.16666666666666666]`
+
+***Voting Ensemble Algorithm***
   * A Voting Classifier is a machine learning model that trains on an ensemble of numerous models and predicts an output (class) based on their highest probability of chosen   class as the output.
   * It aggregates the findings of each classifier passed into Voting Classifier and predicts the output class based on the highest majority of voting. 
   * Instead of creating separate dedicated models and finding the accuracy for each them, we create a single model which trains by these models and predicts output based on their combined majority of voting for each output class.
+
 * The best model was then registered with the provided workspace using the _`register_model()`_ method of _`Model`_ class.
   ```
   description = "AutoML model trained on the Kaggle Heart Disease UCI Dataset"
@@ -167,6 +177,7 @@
   * `workspace`: Workspace name to register the model with.
   * `model_name`: The name to register the model with.
   * `description`: A text description of the model.
+
 
 * The following Algorithms were used on the dataset to retrieve the trained model:
   1. `LogisticRegression`
@@ -184,16 +195,98 @@
   ![Image of Best AutoML Run Details](Images/CP_autoML_best_run.png)
   ![Image of Best AutoML Run Details](Images/CP_autoML_best_run_details.png)
 
-
+<hr/>
 
 ## Hyperparameter Tuning
-*TODO*: What kind of model did you choose for this experiment and why? Give an overview of the types of parameters and their ranges used for the hyperparameter search
+* ***Hyperparameter Tuning:***
+  * _Hyperparameters_ are adjustable parameters that controls the model training process and the model performance depends heavily on hyperparameters.
+  * *Hyperparameter tuning* (hyperparameter optimization), is the process of finding the configuration of hyperparameters that results in the best performance. The process is computationally expensive and manual. 
+  * The _`HyperDrive`_ package in Azure ML automates and optimizes tuning of hyperparameters by using the _`HyperDriveConfig()`_.
+<br/> 
 
+* ***Steps involved in training the model:***
+  * This training approach used a _`Scikit-learn Logistic Regression`_ algorithm to simplify the training process of the model on the dataset which took in 2 hyperparameters: 
+    * `--C`: Inverse of regularization strength
+    * `--max-iter`: Maximum number of iterations that should be taken to converge.. 
+  * The hyperparameters for Logistic Regression were chosen and optimized using the HyperDrve to obtain the best model with the highest accuracy.
+  * Load and Clean data:
+    * Once the dataset was loaded into the notebook using the TabularDatasetFactory class, it was cleaned using the _`clean_data()`_ method predefined in the [train.py](train.py) file that performed various preprocessing steps.
+  * Split the data:
+    * The cleaned data was then split into train and test sets in 80-20 ratio using the _`train_test_split()`_ method of scikit-learn module.
+  * Specify an estimator:
+    * An SKLearn Estimator SKLearn estimator was used to begin the training and invoke the training script file.
+    ```
+    estimator = SKLearn (
+      source_directory= os.path.join("./"),
+      compute_target= cpu_cluster,
+      entry_script= "train.py"
+    )
+    ```
+  * Define the parameter search space:
+    * The search space for randomly choosing hyperparameters was selected. The search space in this project, were specified as `choice` for `--max_iter``, and `uniform` for `--C`.
+    ```
+    search_space = {
+      "--C" : uniform(0.01, 1),
+      "--max_iter" : choice(10, 50, 100, 150, 200)
+    }
+    ```
+    * This search space was then fed to a parameter sampler which specified the method to select hyperparameters from the search space. This experiment used a RandomParameterSampling sampler to randomly select values specified in the search space for --C and --max_iter.
+    ```
+    param_sampling = RandomParameterSampling (search_space)
+
+    ```
+  * Specify a primary metric: 
+    * Primary Metric (primary_metric_name) is used for evaluating and comparing run results. The project used _`accuracy`_ as the primary metric with the goal (primary_metric_goal) value _`primary_metric_goal.MAXIMIZE`_ to maximize the primary metric in every run.
+  * Specify early termination policy:
+    * An early termination policy was passed to ensure low performing runs were terminated and resources not wasted. In this experiment the _`BanditPolicy`_ was used.
+  * Allocate resources:
+    * Resources for controlling and running the experiment were specified using _`max_concurrent_runs`_ (Maximum number of runs that can run concurrently in the experiment) and _`max_total_runs`_ (Maximum number of training runs).
+  * Define HyperDriveConfig:
+    * The best configuration for the run was defined using a HyperDriveConfig object.
+    ```
+    hyperdrive_run_config = HyperDriveConfig (
+        estimator = estimator, 
+        hyperparameter_sampling = param_sampling, 
+        policy = early_termination_policy,
+        primary_metric_name = 'accuracy', 
+        primary_metric_goal = PrimaryMetricGoal.MAXIMIZE, 
+        max_total_runs = 20,
+        max_concurrent_runs = 4
+    )
+    ```
+    
+  * Submit Run and Save the best model
+    * The run was submitted to the experiment and HyperDriveConfig object was passed as a parameter to the run"
+    ```
+    run = experiment.submit(hyperdrive_run_config)
+    ```
+    
+  * The screenshot below shows the run progress of submitted AutoML experiment
+    ![AutoML Experiment Run](Images/CP_hyperdrive_runs.png)
+  
+  * Once submitted the progress of the run was observed via the run widget of the _`RunDetails`_ class in the Jupyter notebook. 
+  ```
+  from azureml.widgets import RunDetails
+  RunDetails(run).show()
+  ```
+  * The screenshot below shows the widget that tracks and displays the AutoML run progress
+  ![Image of Run Widget](Images/CP_hyperdrive_widget_3.png)
 
 ### Results
-*TODO*: What are the results you got with your model? What were the parameters of the model? How could you have improved it?
+* The screenshot below shows the run progress as ***completed*** for the submitted Hyperdrive experiment   
+    ![AutoML Completd Run](Images/CP_hyperdrive_completed_runs.png)
 
-*TODO* Remeber to provide screenshots of the `RunDetails` widget as well as a screenshot of the best model trained with it's parameters.
+* The screenshot below shows the completed Hyperdrive experiment run details
+  ![Image of Completed AutoML Run Details](Images/CP_hyperdrive_completed_run_details.png)
+    
+* The best model obtained post training had an highest accuracy of _`0.8852`_. 
+* Parameter Values:  ['--C', '0.8750515086805049', '--max_iter', '200']
+
+* The screenshot below shows the best run details and metrics of the completed hyperdrive experiment
+
+  ![Image of Best AutoML Run Details](Images/CP_autoML_best_run.png)
+  ![Image of Best AutoML Run Details](Images/CP_autoML_best_run_details.png)
+
 
 ## Model Deployment
 *TODO*: Give an overview of the deployed model and instructions on how to query the endpoint with a sample input.

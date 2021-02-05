@@ -24,12 +24,11 @@
   * Using customized model whose hyperparameters were tuned using ***HyperDrive***.
 * The performance of both the models were compared and the best _performing model was deployed_.
 ### Project Architecture
-* ![Image of Projct Architecture](Images/CP_Architecture.png)
-
+![Image of Projct Architecture](Images/CP_Architecture.png)
 ## Project Set Up and Installation
 * In this project, the Azure ML lab offered by Udacity was used. Hence, the Workspace was already set up and ready.
 * A compute instance `compute-project` was created with STANDARD_DS3_V2 VM size. 
-![Image of Compute Instance](Images/compute_instance.png)
+  ![Image of Compute Instance](Images/CP_compute_instance.png)
 * The starter files from this [project repository](https://github.com/udacity/nd00333-capstone) were forked and cloned to the workspace.
 <hr/>
 
@@ -87,7 +86,6 @@
 <hr/>
 
 ## Automated ML
-*TODO*: Give an overview of the `automl` settings and configuration you used for this experiment
 * ***Automated Machine Learning (AutoML)***
   * AutoML is the process of automating the time consuming, iterative tasks of machine learning model development. 
   * It helps in developeing ML models with high scale, efficiency, and productivity all while sustaining model quality. 
@@ -128,14 +126,15 @@
     ```
     remote_run = experiment.submit(automl_config, show_output = True)
     ```
+    ![AutoML Experiment Run](Images/CP_autoML_runs.png)
+    ![AutoML Completd Run](Images/CP_autpML_completed_runs.png)
 ### Results
-*TODO*: What are the results you got with your automated ML model? What were the parameters of the model? How could you have improved it?
 * Once submitted the progress of the run was observed via the run widget of the _`RunDetails`_ class in the Jupyter notebook. 
   ```
   from azureml.widgets import RunDetails
   RunDetails(remote_run).show()
   ```
-  ![Image of Run Widget](Images/autoML_run_widget.png)
+  ![Image of Run Widget](Images/autoML_widget.png)
 * The following Algorithms were used on the dataset to retrieve the trained model:
   1. `LogisticRegression`
   1. `XGBoostClassifier`
@@ -147,7 +146,11 @@
   1. `KNN`
   1. `VotingEnsemble`
 * The best model obtained post training with the highest accuracy was a `VotingEnsemble` algorithm with an accuracy of _`0.8380`_. 
-* The best model was then registered with the provided workspace using the _`register()`_ method of _`Model`_ class.
+* ***Voting Ensemble Algorithm***
+  * A Voting Classifier is a machine learning model that trains on an ensemble of numerous models and predicts an output (class) based on their highest probability of chosen   class as the output.
+  * It aggregates the findings of each classifier passed into Voting Classifier and predicts the output class based on the highest majority of voting. 
+  * Instead of creating separate dedicated models and finding the accuracy for each them, we create a single model which trains by these models and predicts output based on their combined majority of voting for each output class.
+* The best model was then registered with the provided workspace using the _`register_model()`_ method of _`Model`_ class.
   ```
   description = "AutoML model trained on the Kaggle Heart Disease UCI Dataset"
   joblib.dump(fitted_model, filename="outputs/automl-heart-disease.pkl") # saving the model locally
@@ -156,6 +159,10 @@
   * `workspace`: Workspace name to register the model with.
   * `model_name`: The name to register the model with.
   * `description`: A text description of the model.
+  
+
+
+
 
 ## Hyperparameter Tuning
 *TODO*: What kind of model did you choose for this experiment and why? Give an overview of the types of parameters and their ranges used for the hyperparameter search

@@ -2,6 +2,7 @@
 
 ## TABLE OF CONTENTS
 * [Project Overview](#project-overview)
+  * [Projct Architecture](@project-architecture)
 * [Project Set Up and Installation](#project-set-up-and-installation)
 * [Dataset](#dataset)
   * [Overview](#overview)
@@ -22,6 +23,8 @@
   * Using Automated ML (AutoML)
   * Using customized model whose hyperparameters were tuned using ***HyperDrive***.
 * The performance of both the models were compared and the best _performing model was deployed_.
+### Project Architecture
+* ![Image of Projct Architecture](Images/CP_Architecture.png)
 
 ## Project Set Up and Installation
 * In this project, the Azure ML lab offered by Udacity was used. Hence, the Workspace was already set up and ready.
@@ -76,19 +79,7 @@
 *TODO*: Explain the task you are going to be solving with this dataset and the features you will be using for it.
 * The goal of the project was to train the model to predict whether a patient has heart disease or not.
 * The features used to train the model were:
-  1. `Age (age)`
-  1. `Sex (sex)`
-  1. `Chest pain type (cp)`
-  1. `Resting Blood Pressure (trestbps)`
-  1. `Cholesterol (chol)`
-  1. `Fasting Bloos Sugar (fbs)`
-  1. `Resting Electrocardiographic (restecg)`
-  1. `Maximum Heart Rate Achieved (thalach)`
-  1. `Exercise induced Angina (exang)`
-  1. `ST depression induced by exercise (oldpeak)`
-  1. `Slope (slope)`
-  1. `Number of major vessels (ca)`
-  1. `Thalassemia (thal)`
+  * `Age (age)`, `Sex (sex)`, `Chest pain type (cp)`, `Resting Blood Pressure (trestbps)`, `Cholesterol (chol)`, `Fasting Bloos Sugar (fbs)`, `Resting Electrocardiographic (restecg)`, `Maximum Heart Rate Achieved (thalach)`, `Exercise induced Angina (exang)`, `ST depression induced by exercise (oldpeak)`, `Slope (slope)`, `Number of major vessels (ca)`, `Thalassemia (thal)`
 * The prediction column is `Target (target)` which is used by the model to predict whether a person has heart disease or not
 ### Access
 *TODO*: Explain how you are accessing the data in your workspace.

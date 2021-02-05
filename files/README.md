@@ -24,10 +24,14 @@
   * Using customized model whose hyperparameters were tuned using ***HyperDrive***.
 * The performance of both the models were compared and the best _performing model was deployed_.
 ### Project Architecture
-![Image of Projct Architecture](Images/CP_Architecture.png)
+* The image below shows the workflow and architecutre used in the project.
+
+  ![Image of Projct Architecture](Images/CP_Architecture.png)
 ## Project Set Up and Installation
 * In this project, the Azure ML lab offered by Udacity was used. Hence, the Workspace was already set up and ready.
 * A compute instance `compute-project` was created with STANDARD_DS3_V2 VM size. 
+* The screenshot below shows the compute instance used in the project to run the experiments.
+
   ![Image of Compute Instance](Images/CP_compute_instance.png)
 * The starter files from this [project repository](https://github.com/udacity/nd00333-capstone) were forked and cloned to the workspace.
 <hr/>
@@ -75,14 +79,17 @@
     * 0: Absence
     * 1: Presence
 ### Task
-*TODO*: Explain the task you are going to be solving with this dataset and the features you will be using for it.
 * The goal of the project was to train the model to predict whether a patient has heart disease or not.
 * The features used to train the model were:
   * `Age (age)`, `Sex (sex)`, `Chest pain type (cp)`, `Resting Blood Pressure (trestbps)`, `Cholesterol (chol)`, `Fasting Bloos Sugar (fbs)`, `Resting Electrocardiographic (restecg)`, `Maximum Heart Rate Achieved (thalach)`, `Exercise induced Angina (exang)`, `ST depression induced by exercise (oldpeak)`, `Slope (slope)`, `Number of major vessels (ca)`, `Thalassemia (thal)`
 * The prediction column is `Target (target)` which is used by the model to predict whether a person has heart disease or not
 ### Access
-*TODO*: Explain how you are accessing the data in your workspace.
 * The dataset was uploaded and registered to the Azure default datastore as a Tabular Dataset using the [csv file](heart.csv).
+  ```
+  from azureml.data.dataset_factory import TabularDatasetFactory
+  url_path = "https://raw.githubusercontent.com/bharati-21/AZMLND-Capstone-Project/master/files/heart.csv"
+  ds = TabularDatasetFactory.from_delimited_files(path=url_path)
+  ```
 <hr/>
 
 ## Automated ML
@@ -126,25 +133,26 @@
     ```
     remote_run = experiment.submit(automl_config, show_output = True)
     ```
+    
+  * The screenshot below shows the run progress of submitted AutoML experiment
     ![AutoML Experiment Run](Images/CP_autoML_runs.png)
-    ![AutoML Completd Run](Images/CP_autpML_completed_runs.png)
-### Results
-* Once submitted the progress of the run was observed via the run widget of the _`RunDetails`_ class in the Jupyter notebook. 
+  
+  * Once submitted the progress of the run was observed via the run widget of the _`RunDetails`_ class in the Jupyter notebook. 
   ```
   from azureml.widgets import RunDetails
   RunDetails(remote_run).show()
   ```
+  * The screenshot below shows the widget that tracks and displays the AutoML run progress
   ![Image of Run Widget](Images/autoML_widget.png)
-* The following Algorithms were used on the dataset to retrieve the trained model:
-  1. `LogisticRegression`
-  1. `XGBoostClassifier`
-  1. `LightGBM`
-  1. `RandomForest`
-  1. `SVM`
-  1. `GradientBoosting`
-  1. `ExtremeRandomTree`
-  1. `KNN`
-  1. `VotingEnsemble`
+  
+    
+### Results
+* The screenshot below shows the run progress as ***completed*** for the submitted AutoML experiment   
+    ![AutoML Completd Run](Images/CP_autpML_completed_runs.png)
+
+* The screenshot below shows the completed AutoML experiment run details
+  ![Image of Completed AutoML Run Details](Images/CP_autoML_completed_run_details.png)
+    
 * The best model obtained post training with the highest accuracy was a `VotingEnsemble` algorithm with an accuracy of _`0.8380`_. 
 * ***Voting Ensemble Algorithm***
   * A Voting Classifier is a machine learning model that trains on an ensemble of numerous models and predicts an output (class) based on their highest probability of chosen   class as the output.
@@ -159,8 +167,22 @@
   * `workspace`: Workspace name to register the model with.
   * `model_name`: The name to register the model with.
   * `description`: A text description of the model.
-  
 
+* The following Algorithms were used on the dataset to retrieve the trained model:
+  1. `LogisticRegression`
+  1. `XGBoostClassifier`
+  1. `LightGBM`
+  1. `RandomForest`
+  1. `SVM`
+  1. `GradientBoosting`
+  1. `ExtremeRandomTree`
+  1. `KNN`
+  1. `VotingEnsemble`
+  
+* The screenshot below shows the best run details and metrics of the completed AutoML experiment
+
+  ![Image of Best AutoML Run Details](Images/CP_autoML_best_run.png)
+  ![Image of Best AutoML Run Details](Images/CP_autoML_best_run_details.png)
 
 
 

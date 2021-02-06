@@ -86,7 +86,7 @@
     
 ### Task
 * The goal of the project was to train the model to predict whether a patient has heart disease or not.
-* All the features mentioned above were used to train the model and the the prediction column is `Target (target)` which was used by the model to predict whether a person has heart disease or not.
+* All the features mentioned above were used to train the model and the the prediction column is _`Target (target)`_ which was used by the model to predict whether a person has heart disease or not.
 * Once the dataset was loaded for both the training experiments, it was cleaned using the _`clean_data()`_ method predefined in the [train.py](train.py) file that performed various preprocessing steps such removing duplicate rows, one hot encoding, removing unnecessary categorical values etc.
 * The cleaned data was then split into train and test sets in 80-20 ratio using the _`train_test_split()`_ method of scikit-learn module.
 
@@ -105,42 +105,42 @@
   * It helps in developeing ML models with high scale, efficiency, and productivity all while sustaining model quality. 
   
 * ***Steps involved in developing the model:***
-  * Training a model with the given dataset was identified to be a `_classification_` task since the goal was to predict whether a person has heart disease or not.
-  * In this project `_Python SDK_` was used to complete the task. But the Azure ML studio designer can also be used to train the model.
+  * Training a model with the given dataset was identified to be a _`classification`_ task since the goal was to predict whether a person has heart disease or not.
+  * In this project _`Python SDK`_ was used to complete the task. But the Azure ML studio designer can also be used to train the model.
   
   * __`AutoMLConfig`__ Class was used to create the configurations for submitting the AutoML run experiment.   
     1. **The settings created for the AutoML run was**:
        * `Experiment Timeout (experiment_timeout_minutes)`: Maximum amount of time (in minutes) that all iterations combined can take before the experiment terminates.
        * `Primary Metric (primary_metric)`: The primary metric which is used to evaluate every run. In this case, accuracy is the primary metric to be evaluated.
        * `Cross Validations (n_cross_validations)`: Specifies the number of cross validations that needs to be performed on each model by splitting the dataset into n subsets.
-       ``` 
-       automl_settings = {
-        "experiment_timeout_minutes": 30,
-        "primary_metric": 'accuracy',
-        n_cross_validations = 5,
-       }
-       ```
+         ``` 
+         automl_settings = {
+          "experiment_timeout_minutes": 30,
+          "primary_metric": 'accuracy',
+          n_cross_validations = 5,
+         }
+         ```
       
     1. **The AutoMLConfg object was defined as follows**:
        * Task to be performed (task): The tpye of task that needs to be run such as classification, regression, forecasting etc. In this project classification is the task to be performed.
        * Training Data (training_data) = The TabularDataset that contains the training data.
        * Label Column (label_column_name): Name of the column that needs to be predicted. In this case the column that contains "yes" or "no" to perform classification.
        * Compute Target (compute_target): The cluster used to run the experiment on.
-       ```
-       automl_config = AutoMLConfig (
-         task = 'classification',
-         training_data = train_data,
-         label_column_name = "target",
-         enable_onnx_compatible_models = True,
-         compute_target = cpu_cluster,
-         **automl_settings
-       )
-       ```
+         ```
+         automl_config = AutoMLConfig (
+           task = 'classification',
+           training_data = train_data,
+           label_column_name = "target",
+           enable_onnx_compatible_models = True,
+           compute_target = cpu_cluster,
+           **automl_settings
+         )
+         ```
     1. **Submit the training run**:
        * The run was submitted to the experiment and AutoMLConfig object was passed as a parameter to the run:
-       ```
-       remote_run = experiment.submit(automl_config, show_output = True)
-       ```
+         ```
+         remote_run = experiment.submit(automl_config, show_output = True)
+         ```
     
   * The screenshot below shows the run progress of submitted AutoML experiment
     ![AutoML Experiment Run](Images/CP_autoML_runs.png)
@@ -171,14 +171,15 @@
   * Instead of creating separate dedicated models and finding the accuracy for each them, we create a single model which trains by these models and predicts output based on their combined majority of voting for each output class.
 
 * The run was registered with the provided workspace using the _`register_model()`_ method of _`Model`_ class.
-  ```
-  description = "AutoML model trained on the Kaggle Heart Disease UCI Dataset"
-  joblib.dump(fitted_model, filename="outputs/automl-heart-disease.pkl") # saving the model locally
-  automl_model = remote_run.register_model(model_name='automl-heart-disease', description=description)
-  ```
+* The following were the parameters passed to the method:
   * `workspace`: Workspace name to register the model with.
   * `model_name`: The name to register the model with.
   * `description`: A text description of the model.
+    ```
+    description = "AutoML model trained on the Kaggle Heart Disease UCI Dataset"
+    joblib.dump(fitted_model, filename="outputs/automl-heart-disease.pkl") # saving the model locally
+    automl_model = remote_run.register_model(model_name='automl-heart-disease', description=description)
+    ```
 
 * The best run of the AutoML experiment was then obtained using _`get_outpu()`_.
   ```
@@ -217,22 +218,22 @@
   
   1. Specify an estimator:
      * An SKLearn Estimator SKLearn estimator was used to begin the training and invoke the training script file.
-     ```
-     estimator = SKLearn (
-       compute_target= cpu_cluster,
-       entry_script= "train.py"
-     )
-     ```
+       ```
+       estimator = SKLearn (
+         compute_target= cpu_cluster,
+         entry_script= "train.py"
+       )
+       ```
      
   1. Define the parameter search space:
      * The search space for randomly choosing hyperparameters was selected. The search space in this project were specified as `choice` for `--max_iter``, and `uniform` for `--C`.
      * This search space was then fed to a parameter sampler which specified the method to select hyperparameters from the search space. This experiment used a RandomParameterSampling sampler to randomly select values specified in the search space for --C and --max_iter.
-     ```
-      param_sampling = RandomParameterSampling({ 
-       "--C" : uniform(0.01, 1),
-       "--max_iter" : choice(10, 50, 100, 150, 200)
-     })
-     ```
+       ```
+        param_sampling = RandomParameterSampling({ 
+         "--C" : uniform(0.01, 1),
+         "--max_iter" : choice(10, 50, 100, 150, 200)
+       })
+       ```
      
   1. Specify a primary metric: 
      * Primary Metric (primary_metric_name) is used for evaluating and comparing run results. The project used _`accuracy`_ as the primary metric with the goal (primary_metric_goal) value _`primary_metric_goal.MAXIMIZE`_ to maximize the primary metric in every run.
@@ -245,23 +246,23 @@
      
   1. Define HyperDriveConfig:
      * The best configuration for the run was defined using a HyperDriveConfig object.
-     ```
-     hyperdrive_run_config = HyperDriveConfig (
-         estimator = estimator, 
-         hyperparameter_sampling = param_sampling, 
-         policy = early_termination_policy,
-         primary_metric_name = 'accuracy', 
-         primary_metric_goal = PrimaryMetricGoal.MAXIMIZE, 
-         max_total_runs = 20,
-         max_concurrent_runs = 4
-     )
-     ```
+       ```
+       hyperdrive_run_config = HyperDriveConfig (
+           estimator = estimator, 
+           hyperparameter_sampling = param_sampling, 
+           policy = early_termination_policy,
+           primary_metric_name = 'accuracy', 
+           primary_metric_goal = PrimaryMetricGoal.MAXIMIZE, 
+           max_total_runs = 20,
+           max_concurrent_runs = 4
+       )
+       ```
     
   1. Submit Run and Save the best model
      * The run was submitted to the experiment and HyperDriveConfig object was passed as a parameter to the run"
-     ```
-     run = experiment.submit(hyperdrive_run_config)
-     ```
+       ```
+       run = experiment.submit(hyperdrive_run_config)
+       ```
     
   * The screenshot below shows the run progress of submitted HyperDrive periment
     ![HyperDrive Experiment Run](Images/CP_hyperdrive_runs.png)
@@ -289,26 +290,26 @@
   ```
   best_run = run.get_best_run_by_primary_metric()
   ```
+
+* The screenshot below shows the best run details of the completed hyperdrive experiment
+  ![Image of Best HyperDrive Run Details](Images/CP_hyperdrive_best_run.png)
   
 * The best run is then registered using the _`register_model()`_ method of _`Model`_ class.
-  ```
-  description = 'Model trained on the Heart Disease UCI Machine Learning Dataset from Kaggle' 
-  registered_model = best_run.register_model(model_name = 'hyperdrive-heart-disease',
-                                             model_path = './outputs/hyperdrive-heart-disease.pkl',
-                                             model_framework = Model.Framework.SCIKITLEARN,
-                                             model_framework_version = '0.22.2',
-                                             description = description)
-  ```
+* The parameters passed to the method were:
   * `model_name`: The name to register the model with.
   * `model_path`: This parameter refers to the cloud location of the model.
   * `model_framework`: The framework of the model to register. 
   * `model_framework_version`: The framework version of the registered model.
   * `description`: A text description of the model.
-
-* The screenshot below shows the best run details of the completed hyperdrive experiment
-  ![Image of Best HyperDrive Run Details](Images/CP_hyperdrive_best_run.png)
-
-
+    ```
+    description = 'Model trained on the Heart Disease UCI Machine Learning Dataset from Kaggle' 
+    registered_model = best_run.register_model(model_name = 'hyperdrive-heart-disease',
+                                               model_path = './outputs/hyperdrive-heart-disease.pkl',
+                                               model_framework = Model.Framework.SCIKITLEARN,
+                                               model_framework_version = '0.22.2',
+                                               description = description)
+    ```
+    
 ## Model Deployment
 * The best model was obtained after completing both the training experiments and was found to be the model trained using the Scikit-Learn Logistic Regression whose hyperparameters were tuned using HyperDrive.
 
@@ -399,4 +400,7 @@
 - Demo of a sample request sent to the endpoint and its response
 
 ## Standout Suggestions
-*TODO (Optional):* This is where you can provide information about any standout suggestions that you have attempted.
+1. **Converting the Model to ONNX Format:**
+   * ONNX Runtime is a high-performance inference engine for deploying ONNX models to production. 
+   * It's optimized for both cloud and edge and works on Linux, Windows, and Mac. 
+

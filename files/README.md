@@ -152,7 +152,7 @@
     ```
     
   * The screenshot below shows the widget that tracks and displays the AutoML run progress
-  ![Image of Run Widget](Images/autoML_widget.png)
+  ![Image of Run Widget](Images/CP_autoML_widget.png)
    
 ### Results
 * The screenshot below shows the run progress as ***completed*** for the submitted AutoML experiment   
@@ -194,7 +194,7 @@
 * The screenshot below shows the best run details and metrics of the completed AutoML experiment
 
   ![Image of Best AutoML Run Details](Images/CP_autoML_best_run.png)
-  ![Image of Best AutoML Run Details](Images/CP_autoML_best_run_details.png)
+  ![Image of Best AutoML Run Details](Images/CP_autoML_best_run_metrics.png)
 
 <hr/>
 
@@ -203,7 +203,6 @@
   * _Hyperparameters_ are adjustable parameters that controls the model training process and the model performance depends heavily on hyperparameters.
   * *Hyperparameter tuning* (hyperparameter optimization), is the process of finding the configuration of hyperparameters that results in the best performance. The process is computationally expensive and manual. 
   * The _`HyperDrive`_ package in Azure ML automates and optimizes tuning of hyperparameters by using the _`HyperDriveConfig()`_.
-<br/> 
 
 * ***Steps involved in training the model:***
   * This training approach used a _`Scikit-learn Logistic Regression`_ algorithm to simplify the training process of the model on the dataset which took in 2 hyperparameters: 
@@ -259,7 +258,7 @@
      run = experiment.submit(hyperdrive_run_config)
      ```
     
-  * The screenshot below shows the run progress of submitted AutoML experiment
+  * The screenshot below shows the run progress of submitted HyperDrive periment
     ![AutoML Experiment Run](Images/CP_hyperdrive_runs.png)
   
   * Once submitted the progress of the run was observed via the run widget of the _`RunDetails`_ class in the Jupyter notebook. 
@@ -273,21 +272,21 @@
 
 ### Results
 * The screenshot below shows the run progress as ***completed*** for the submitted Hyperdrive experiment   
-    ![AutoML Completd Run](Images/CP_hyperdrive_completed_runs.png)
+    ![AutoML Completd Run](Images/CP_hyperdrive_run_completed.png)
 
 * The screenshot below shows the completed Hyperdrive experiment run details
-  ![Image of Completed AutoML Run Details](Images/CP_hyperdrive_completed_run_details.png)
+  ![Image of Completed AutoML Run Details](Images/CP_hyperdrive_run_completeed_details.png)
     
 * The best model obtained post training had an highest accuracy of _`0.8852`_. 
 * `Parameter Values`:  ['--C', '0.8750515086805049', '--max_iter', '200']
 
-* The screenshot below shows the best run details and metrics of the completed hyperdrive experiment
+* The screenshot below shows the best run details of the completed hyperdrive experiment
 
-  ![Image of Best AutoML Run Details](Images/CP_autoML_best_run.png)
-  ![Image of Best AutoML Run Details](Images/CP_autoML_best_run_details.png)
+  ![Image of Best AutoML Run Details](Images/CP_hyperdrive_best_run.png)
 
 
 ## Model Deployment
+* The best model from both the training experiments was found to be 
 *TODO*: Give an overview of the deployed model and instructions on how to query the endpoint with a sample input.
 
 ## Screen Recording

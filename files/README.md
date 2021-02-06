@@ -170,7 +170,7 @@
   * It aggregates the findings of each classifier passed into Voting Classifier and predicts the output class based on the highest majority of voting. 
   * Instead of creating separate dedicated models and finding the accuracy for each them, we create a single model which trains by these models and predicts output based on their combined majority of voting for each output class.
 
-* The best model was then registered with the provided workspace using the _`register_model()`_ method of _`Model`_ class.
+* The run was registered with the provided workspace using the _`register_model()`_ method of _`Model`_ class.
   ```
   description = "AutoML model trained on the Kaggle Heart Disease UCI Dataset"
   joblib.dump(fitted_model, filename="outputs/automl-heart-disease.pkl") # saving the model locally
@@ -179,6 +179,11 @@
   * `workspace`: Workspace name to register the model with.
   * `model_name`: The name to register the model with.
   * `description`: A text description of the model.
+
+* The best run of the AutoML experiment was then obtained using _`get_outpu()`_.
+  ```
+  best_run, fitted_model = remote_run.get_output()
+  ```
 
 * The following Algorithms were used on the dataset to retrieve the trained model:
   1. `LogisticRegression`
@@ -259,35 +264,133 @@
      ```
     
   * The screenshot below shows the run progress of submitted HyperDrive periment
-    ![AutoML Experiment Run](Images/CP_hyperdrive_runs.png)
+    ![HyperDrive Experiment Run](Images/CP_hyperdrive_runs.png)
   
   * Once submitted the progress of the run was observed via the run widget of the _`RunDetails`_ class in the Jupyter notebook. 
-  ```
-  from azureml.widgets import RunDetails
-  RunDetails(run).show()
-  ```
+    ```
+    from azureml.widgets import RunDetails
+    RunDetails(run).show()
+    ```
   
   * The screenshot below shows the widget that tracks and displays the AutoML run progress
   ![Image of Run Widget](Images/CP_hyperdrive_widget_3.png)
 
 ### Results
 * The screenshot below shows the run progress as ***completed*** for the submitted Hyperdrive experiment   
-    ![AutoML Completd Run](Images/CP_hyperdrive_run_completed.png)
+    ![HyperDrive Completd Run](Images/CP_hyperdrive_run_completed.png)
 
 * The screenshot below shows the completed Hyperdrive experiment run details
-  ![Image of Completed AutoML Run Details](Images/CP_hyperdrive_run_completeed_details.png)
-    
+  ![Image of Completed HyperDrive Run Details](Images/CP_hyperdrive_run_completeed_details.png)
+      
 * The best model obtained post training had an highest accuracy of _`0.8852`_. 
 * `Parameter Values`:  ['--C', '0.8750515086805049', '--max_iter', '200']
 
-* The screenshot below shows the best run details of the completed hyperdrive experiment
+* The best run of the experiment was retrieved using the _`get_best_run_by_primary_metric()`_ method of _`HyperDriveRun`_ class.
+  ```
+  best_run = run.get_best_run_by_primary_metric()
+  ```
+  
+* The best run is then registered using the _`register_model()`_ method of _`Model`_ class.
+  ```
+  description = 'Model trained on the Heart Disease UCI Machine Learning Dataset from Kaggle' 
+  registered_model = best_run.register_model(model_name = 'hyperdrive-heart-disease',
+                                             model_path = './outputs/hyperdrive-heart-disease.pkl',
+                                             model_framework = Model.Framework.SCIKITLEARN,
+                                             model_framework_version = '0.22.2',
+                                             description = description)
+  ```
+  * `model_name`: The name to register the model with.
+  * `model_path`: This parameter refers to the cloud location of the model.
+  * `model_framework`: The framework of the model to register. 
+  * `model_framework_version`: The framework version of the registered model.
+  * `description`: A text description of the model.
 
-  ![Image of Best AutoML Run Details](Images/CP_hyperdrive_best_run.png)
+* The screenshot below shows the best run details of the completed hyperdrive experiment
+  ![Image of Best HyperDrive Run Details](Images/CP_hyperdrive_best_run.png)
 
 
 ## Model Deployment
-* The best model from both the training experiments was found to be 
-*TODO*: Give an overview of the deployed model and instructions on how to query the endpoint with a sample input.
+* The best model was obtained after completing both the training experiments and was found to be the model trained using the Scikit-Learn Logistic Regression whose hyperparameters were tuned using HyperDrive.
+
+***Steps Followed to Deploy the Model:***
+1. **Define an entry script**
+   * An entry script was written which receives data submitted to the deployed web service and passes it to the model. 
+   * It then takes the response returned by the model and returns that to the client. 
+   * The entry script[ _`score.py`_](score.py) conatined:
+     * `init()`: to loading the model 
+     * `run()`: to run the model on input data
+     
+1. **Define an inference configuration**:
+   * An inference configuration describes how to set up the web-service containing your model, which is used later while deploying the model.
+   * An environment wass loaded from the workspace and then cloned.
+   * Several dependenices were specified such as _`scikit-learn`_ using _`CondaDependencies`_.
+   * The environment was then used to create an _`InferenceConfig`_.
+     ```
+     env = Environment.get(ws, "myenv").clone('new_myenv')
+     myenv = Environment.from_conda_specification(name="myenv", file_path="myenv.yml")
+     inference_config = InferenceConfig(entry_script="score.py", environment=myenv)
+     ```
+
+1. **Choose compute target and deployment configuration**
+   * The compute target is used to host the model, and it will affect the cost and availability of the deployed endpoint.
+   * Deployment configuration defined is specific to the compute target that will host the web service and is used to define the characteristics of the compute target that will host the model and entry script.
+   * This project used the `Azure Container Instances (ACI)` and the configuration was defined as follows:
+     ```
+     from azureml.core.webservice import AciWebservice
+     aci_config = AciWebservice.deploy_configuration(cpu_cores=1, 
+                  memory_gb=1, 
+                  description='Predict if a person has Heart disease or not',
+                  auth_enabled = True
+     )
+     ```
+   * Authentication was also enabled for the deployed model.
+
+1. **Deploy the machine learning model**
+   * To deploy the model, _`deploy_configuration()`_ method of the _`AciWebservice`_ class was used.
+   * The following parameters were passed to the method:
+     * `workspace`: The workspace object containing the model to retrieve.
+     * `name`: The name of the model to retrieve.
+     * `inference_config`: The inference config that defines how to set up the webservice of the deployed model.
+     * `deployment_config`: The deployment configuration specifying the compute target and it's characteristics to host the service.
+     ```
+     service = Model.deploy(workspace=ws, 
+                       name='heart-disease-hyperdrive', 
+                       models=[model], 
+                       inference_config=inference_config, 
+                       deployment_config=aci_config
+     )
+     ```
+
+* The screenshot below shows the deployed model endpoint.
+
+  ![Image of Deployed Model Endpoint](Images/CP_deployed_model.png)
+  ![Image of Deployed Model Endpoint](Images/CP_deployed_model2.png)
+
+***Steps Followed to Query the Model Endpoint:***
+* Firstly, the application insights for displaying logs was enabled for the deployed model endpoint by:
+  ```
+  service.update(enable_app_insights=True)
+  ```
+* The screenshot below shows the application insights enabled for the deployed model endpoint.
+  ![Image of app insights enabled for the model endpoint](Images/CP_app_insight_enabled.png)
+  
+* The screenshot below shows site accessed using the Application insights URL
+  
+  ![Image of app insights URL](Images/CP_app_insights.png)
+  ![Image of app insights URL](Images/CP_app_insights_2.png)
+  
+* Using the scoring URI and key, the web service endpoint was queried to obtain the classification result for a randomly selected sample data from test data.
+* Raw HTTP request was sent to the deployed endpoint using _`requests.post()`_ method.
+* The scoring URI, sample JSON input data, and the content type was passed to the post() as parameters.
+* The prediction was obatained using the _`text`_ attribute of the response that was received from the request. 
+  ```
+  random_index = np.random.randint(0, len(test_x)-1)
+  input_data =  [list(test_x.iloc[random_index])] 
+  input_data = json.dumps(input_data)
+
+  response = requests.post(scoring_uri, input_data, headers=headers)
+  print(response.text)
+  ```
 
 ## Screen Recording
 *TODO* Provide a link to a screen recording of the project in action. Remember that the screencast should demonstrate:

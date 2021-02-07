@@ -26,7 +26,7 @@
 
 ### Project Architecture
 * The image below shows the workflow and architecutre used in the project.
-  ![Image of Projct Architecture](Images/CP_Architecture.png | width=100)
+  ![Image of Projct Architecture](Images/CP_Architecture.png = 100)
   
 ## Project Set Up and Installation
 * In this project, the Azure ML lab offered by Udacity was used. Hence, the Workspace was already set up and ready.

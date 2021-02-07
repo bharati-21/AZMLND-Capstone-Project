@@ -22,11 +22,11 @@
 * In this project, two models were created:
   * Using Automated ML (AutoML)
   * Using customized model whose hyperparameters were tuned using ***HyperDrive***.
-* The performance of both the models were compared and the best _performing model was deployed_.
+* The performance of both the models were compared and the _best performing model was deployed_.
 
 ### Project Architecture
 * The image below shows the workflow and architecutre used in the project.
-  ![Image of Projct Architecture](Images/CP_Architecture.png)
+  ![Image of Projct Architecture](Images/CP_Architecture.png | width=100)
   
 ## Project Set Up and Installation
 * In this project, the Azure ML lab offered by Udacity was used. Hence, the Workspace was already set up and ready.

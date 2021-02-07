@@ -14,6 +14,9 @@
   * [Results](#results)
 * [Model Deployment](#model-deployment)
 * [Screen Recording](#screen-recording)
+* [Standout Suggestions](standout-suggestions)
+* [Improvements and Future Work](#improvements-and-future-work)
+* [References](#references)
 <hr/>
 
 ## Project Overview
@@ -310,6 +313,8 @@
                                                description = description)
     ```
     
+<hr/>
+    
 ## Model Deployment
 * The best model was obtained after completing both the training experiments, and was found to be the model trained using the _`Scikit-Learn Logistic Regression`_ whose hyperparameters were tuned using HyperDrive.
 
@@ -368,18 +373,6 @@
   ![Image of Deployed Model Endpoint](Images/CP_deployed_model2.png)
 
 ***Steps Followed to Query the Model Endpoint***:
-   * Firstly, the application insights for displaying logs was enabled for the deployed model endpoint by:
-     ```
-     service.update(enable_app_insights=True)
-     ```
-   * The screenshot below shows the application insights enabled for the deployed model endpoint.
-     ![Image of app insights enabled for the model endpoint](Images/CP_app_insight_enabled.png)
-
-   * The screenshot below shows site accessed using the Application insights URL
-
-     ![Image of app insights URL](Images/CP_app_insights.png)
-     ![Image of app insights URL](Images/CP_app_insights_2.png)
-
    * Using the scoring URI and key, the web service endpoint was queried to obtain the classification result for a randomly selected sample data from test data.
    * Raw HTTP request was sent to the deployed endpoint using _`requests.post()`_ method.
    * The scoring URI, sample JSON input data, and the content type was passed to the post() as parameters.
@@ -393,10 +386,56 @@
      print(response.text)
      ```
 
+<hr/>
+
 ## Screen Recording
 *TODO* Provide a link to a screen recording of the project in action. Remember that the screencast should demonstrate:
 - A working model
 - Demo of the deployed  model
 - Demo of a sample request sent to the endpoint and its response
 
+<hr/>
+
 ## Standout Suggestions
+1. **Converting the Model to ONNX Format**:
+   * Open Neural Network Exchange (ONNX) an open format for ML models, which allows to interchange models between various ML frameworks and tools.
+   * ONNX Runtime is a high-performance inference engine for deploying ONNX models to production. 
+   * It's optimized for both cloud and edge and works on Linux, Windows, and Mac. 
+   
+   * In this project, the trained AutoML model was obtained in the ONNX format along with the python model by setting the _`return_onnx_model`_ parameter to true in the _`get_output()`_ method.
+     ```
+     best_run, onnx_mdl = remote_run.get_output(return_onnx_model=True)
+     ```
+   * Once the ONNX model is obtained, it is tested and predicted using the test dataset.
+     ```
+     pred_onnx, pred_prob_onnx = onnxrt_helper.predict(test_df)
+     ```
+   * The code is available in [this notebook](automl-onnx-converted-model.ipynb)
+
+1. **Enabling logging in the deployed model**: 
+   * The application insights for displaying logs was enabled for the deployed model endpoint by:
+     ```
+     service.update(enable_app_insights=True)
+     ```
+   * The screenshot below shows the application insights enabled for the deployed model endpoint.
+     ![Image of app insights enabled for the model endpoint](Images/CP_app_insight_enabled.png)
+
+   * The screenshot below shows site accessed using the Application insights URL
+
+     ![Image of app insights URL](Images/CP_app_insights.png)
+     ![Image of app insights URL](Images/CP_app_insights_2.png)
+<hr/>
+
+## Improvements and Future Work
+1. The accuracy of AutoML model can be improved by increasing the _`experiment_timeout_minutes`_, which was tried in [this notebook](Heart-Disease-AutoML)
+1. A better performance of the hyperparameter tuned trained model can be obtained with an alternative Parameter Sampeler such as _`BayesianParameterSampling`_, which performs an exhaustive search for hyperparameters in the search space.
+1. To improve the eficiency of the model in the HyperDrive experiment, better performing algorithms like RandomForest or Naive Bayes could be used.
+1. One of the future work could be deploying the model to IoT Edge.
+1. Other hyperparameters for the Logistic Regression model could be specified and optimized in the HyperDrive experiment.
+1. Alternative approaches to EDA and cleaning of the dataset could be applied.
+
+## References
+1. [Azure ML GitHub Page](https://github.com/Azure/MachineLearningNotebooks/tree/master/how-to-use-azureml)
+1. [Official Microsoft Azure ML Documentation](https://docs.microsoft.com/en-us/azure/machine-learning/)
+1. [Machine Learning Engineer with Microsoft Azure Nanodegree Program Course](https://classroom.udacity.com/nanodegrees/nd00333/dashboard/overview)
+1. [Kaggle](https://www.kaggle.com)

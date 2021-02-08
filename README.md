@@ -20,11 +20,11 @@
 <hr/>
 
 ## Project Overview
-> This project is part of the Udacity's Machine Learning Engineer with Microsoft Azure Nanodegree Project.
+> This project is part of the Udacity's Machine Learning Engineer with Microsoft Azure Nanodegree Program.
 
 * In this project, two models were created:
   * Using Automated ML (AutoML)
-  * Using customized model whose hyperparameters were tuned using ***HyperDrive***.
+  * A customized model whose hyperparameters were tuned using ***HyperDrive***.
 * The performance of both the models were compared and the _best performing model was deployed_.
 
 ### Project Architecture
@@ -220,7 +220,7 @@
    * The hyperparameters for Logistic Regression were chosen and optimized using the HyperDrve to obtain the best model with the highest accuracy.
   
    1. **Specify an estimator**:
-      * An _`SKLearn Estimator`_ was used to begin the training and invoke the training script file.
+      * An _`SKLearn`_ Estimator was used to begin the training and invoke the training script file.
         ```
         estimator = SKLearn (
           compute_target= cpu_cluster,
@@ -338,7 +338,7 @@
         ```
 
    1. **Choose compute target and deployment configuration**
-      * The compute target is used to host the model, and it will affect the cost and availability of the deployed endpoint.
+      * A compute target is used to host the model, and it affects the cost and availability of the deployed endpoint.
       * Deployment configuration defined is specific to the compute target that will host the web service and is used to define the characteristics of the compute target that will host the model and entry script.
       * This project used the `Azure Container Instances (ACI)` as the compute target whose configuration was defined as follows:
         ```
@@ -352,7 +352,7 @@
       * Authentication was also enabled for the deployed model.
 
    1. **Deploy the machine learning model**
-      * To deploy the model, _`deploy_configuration()`_ method of the _`AciWebservice`_ class was used.
+      * To deploy the model, _`deploy()`_ method of the _`Model`_ class was used.
       * The following parameters were passed to the method:
         * `workspace`: The workspace object containing the model to retrieve.
         * `name`: The name of the model to retrieve.
@@ -389,10 +389,7 @@
 <hr/>
 
 ## Screen Recording
-*TODO* Provide a link to a screen recording of the project in action. Remember that the screencast should demonstrate:
-- A working model
-- Demo of the deployed  model
-- Demo of a sample request sent to the endpoint and its response
+[Link to the Screencast Recording](https://youtu.be/JGkPaqhOgBo)
 
 <hr/>
 
